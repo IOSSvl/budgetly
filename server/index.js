@@ -16,19 +16,11 @@ function emptyPayload() {
     income: { salary: 0, investPct: 0 },
     extras: [],
     categories: [
-      { id: "affitto", name: "Affitto", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
-      { id: "bollette", name: "Bollette", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
-      { id: "spesa", name: "Spesa", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
-      { id: "trasporti", name: "Trasporti", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
-      { id: "svago", name: "Svago", budget: 0, bucket: "extra", purpose: "expense", useSalary: false, useExtra: true },
-      { id: "risparmi", name: "Risparmi", budget: 0, bucket: "mixed", purpose: "saving", useSalary: true, useExtra: true },
-      { id: "investimenti", name: "Investimenti", budget: 0, bucket: "mixed", purpose: "invest", useSalary: true, useExtra: true }
+      { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false }
     ],
     transactions: [],
     assets: [
-      { id: "a1", name: "Conto principale", value: 0 },
-      { id: "a2", name: "Conto risparmio", value: 0 },
-      { id: "a3", name: "Investimenti", value: 0 }
+      { id: "a1", name: "Conto principale", value: 0 }
     ]
   };
 }
