@@ -74,7 +74,7 @@
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
     .dot{width:12px;height:12px;border-radius:2px}
     .move-entry{
-      grid-template-columns:110px 120px 1fr 140px;
+      grid-template-columns:150px 120px 1fr 140px;
       grid-template-areas:
         "date type desc desc"
         "cat asset amount save";
@@ -99,6 +99,14 @@
     .cat-create #newCatBudget{grid-area:budget}
     .cat-create #newCatBucket{grid-area:bucket}
     .cat-create #addCat{grid-area:add}
+    #moveDate{
+      min-width:140px;
+      font-size:14px;
+      letter-spacing:0;
+    }
+    #moveType, #moveCat, #moveAsset, #newCatBucket{
+      min-width:0;
+    }
     @media (max-width:1400px){
       .app{
         width:min(100%, 1180px);
