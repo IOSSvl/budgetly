@@ -23,7 +23,7 @@ function emptyPayload() {
     goals: [],
     transfers: [],
     auditLog: [],
-    profile: { displayName: "", compactMobile: false, showOnboarding: true },
+    profile: { displayName: "", compactMobile: false, showOnboarding: true, theme: "sand" },
     assets: [
       { id: "a1", name: "Conto principale", value: 0 }
     ]
