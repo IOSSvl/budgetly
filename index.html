@@ -231,6 +231,7 @@ let authToken = localStorage.getItem(TOKEN_KEY) || "";
 let syncTimer = null;
 let lastSyncedAt = localStorage.getItem("budgetly_last_synced_at") || "";
 let cloudSyncInFlight = false;
+let cloudPollTimer = null;
 
 function localSave() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -255,19 +256,25 @@ async function api(path, options = {}) {
   return res.json();
 }
 
+async function saveCloudNow() {
+  if (!authToken) return null;
+  const result = await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+  markSynced(result.updatedAt);
+  $("authStatus").textContent = "Sincronizzato sul cloud";
+  if ($("userStatus")) $("userStatus").textContent = "Connesso e sincronizzato";
+  return result;
+}
+
 function scheduleCloudSave() {
   if (!authToken) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
     try {
-      const result = await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
-      markSynced(result.updatedAt);
-      $("authStatus").textContent = "Sincronizzato sul cloud";
-      if ($("userStatus")) $("userStatus").textContent = "Connesso e sincronizzato";
+      await saveCloudNow();
     } catch {
       $("authStatus").textContent = "Errore sync cloud (dati salvati in locale)";
     }
-  }, 700);
+  }, 250);
 }
 
 function save() {
@@ -561,6 +568,27 @@ async function refreshFromCloud(force = false) {
   }
 }
 
+function flushCloudSaveOnBackground() {
+  if (!authToken) return;
+  clearTimeout(syncTimer);
+  localSave();
+  fetch(`${API_BASE}/data`, {
+    method: "PUT",
+    keepalive: true,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`
+    },
+    body: JSON.stringify({ payload: state })
+  }).catch(() => {});
+}
+
+function startCloudPolling() {
+  clearInterval(cloudPollTimer);
+  if (!authToken) return;
+  cloudPollTimer = setInterval(() => { refreshFromCloud(false); }, 5000);
+}
+
 function setAuthMode(mode) {
   authMode = mode;
   $("authAction").textContent = mode === "register" ? "Crea account" : "Login";
@@ -571,6 +599,7 @@ $("loginBtn").onclick = () => setAuthMode("login");
 $("logoutBtn").onclick = () => {
   authToken = "";
   localStorage.removeItem(TOKEN_KEY);
+  clearInterval(cloudPollTimer);
   $("authStatus").textContent = "Disconnesso";
   $("authScreen").style.display = "grid";
   $("appShell").classList.add("hidden");
@@ -606,6 +635,7 @@ $("authAction").onclick = async () => {
     }
     $("authScreen").style.display = "none";
     $("appShell").classList.remove("hidden");
+    startCloudPolling();
     render();
   } catch (err) {
     $("authStatus").textContent = err.message;
@@ -614,14 +644,17 @@ $("authAction").onclick = async () => {
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
 window.addEventListener("focus", () => { refreshFromCloud(false); });
+window.addEventListener("beforeunload", () => { flushCloudSaveOnBackground(); });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") refreshFromCloud(false);
+  if (document.visibilityState === "hidden") flushCloudSaveOnBackground();
 });
 (async () => {
   await loadCloudDataIfAvailable();
   if (authToken) {
     $("authScreen").style.display = "none";
     $("appShell").classList.remove("hidden");
+    startCloudPolling();
     render();
   } else {
     $("authScreen").style.display = "grid";
