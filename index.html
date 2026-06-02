@@ -11,7 +11,21 @@
     :root { --bg:#0f0e0d; --surface:#181715; --border:#2d2a26; --accent:#e5be4b; --green:#55c26f; --red:#fa5e56; --blue:#6a90ff; --text:#f4efe5; --muted:#8b836f; }
     * { box-sizing:border-box; }
     body { margin:0; font-family:"DM Mono",monospace; color:var(--text); background:radial-gradient(1000px 500px at 20% 0%,#171511 0,transparent 70%),radial-gradient(1000px 500px at 100% 100%,#141923 0,transparent 70%),var(--bg); overflow-x:hidden; }
-    .app { width:min(100%, 1920px); margin:0 auto; min-height:100vh; padding:18px; display:grid; gap:12px; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.2fr); grid-template-areas:"header charts charts" "income moves table" "wealth wealth wealth"; }
+    .app {
+      width:min(100%, 1440px);
+      margin:0 auto;
+      min-height:100vh;
+      padding:18px;
+      display:grid;
+      gap:14px;
+      grid-template-columns:minmax(320px, 0.95fr) minmax(480px, 1.25fr);
+      grid-template-areas:
+        "header header"
+        "charts charts"
+        "income moves"
+        "table table"
+        "wealth wealth";
+    }
     .app.hidden { display:none; }
     .card { border:1px solid #8a71331f; border-radius:14px; background:linear-gradient(160deg,#191714,#11100f); padding:12px; }
     .auth-screen{min-height:100vh;display:grid;place-items:center;padding:20px}
@@ -20,7 +34,21 @@
     h1 { font:800 40px/1 "Syne",sans-serif; }
     h2 { font:700 24px/1 "Syne",sans-serif; color:var(--accent); }
     .header,.charts,.income,.moves,.table,.wealth{min-width:0}
-    .header{grid-area:header}.charts{grid-area:charts;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.income{grid-area:income}.moves{grid-area:moves}.table{grid-area:table}.wealth{grid-area:wealth}
+    .header{grid-area:header}
+    .charts{
+      grid-area:charts;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      align-items:stretch;
+    }
+    .charts > :first-child{
+      grid-column:1 / -1;
+    }
+    .income{grid-area:income}
+    .moves{grid-area:moves}
+    .table{grid-area:table}
+    .wealth{grid-area:wealth}
     .label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font:700 30px/1.1 "Syne",sans-serif}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}
     .muted{color:var(--muted);font-size:12px}
     input,select,button{width:100%;border-radius:9px;border:1px solid var(--border);background:#12110f;color:var(--text);font-family:inherit;padding:9px}
@@ -37,11 +65,12 @@
     .cat-row .cat-status{line-height:1.25;word-break:break-word}
     .chip{font-size:11px;color:#15110a;background:var(--accent);border-radius:999px;padding:4px 8px}
     .progress{height:9px;background:#292620;border-radius:999px;overflow:hidden}.progress>div{height:100%}
-    .chart{display:grid;gap:8px}.bar{display:grid;grid-template-columns:130px 1fr 80px;gap:8px;align-items:center}
+    .chart{display:grid;gap:10px;height:100%}
+    .bar{display:grid;grid-template-columns:140px minmax(0,1fr) 90px;gap:10px;align-items:center}
     .stack{height:12px;background:#27241f;border-radius:999px;overflow:hidden;display:flex}.seg{height:100%}
     details{margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px;background:#13120f}
     summary{cursor:pointer;color:var(--accent);font-weight:700}
-    .pie-wrap{display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center}
+    .pie-wrap{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
     .dot{width:12px;height:12px;border-radius:2px}
     .move-entry{
@@ -71,6 +100,10 @@
     .cat-create #newCatBucket{grid-area:bucket}
     .cat-create #addCat{grid-area:add}
     @media (max-width:1400px){
+      .app{
+        width:min(100%, 1180px);
+        grid-template-columns:minmax(280px, 0.95fr) minmax(0, 1.05fr);
+      }
       .cat-row{
         grid-template-columns:minmax(0,1fr) 88px 88px 44px;
         grid-template-areas:
@@ -101,7 +134,26 @@
       }
       .asset-create{grid-template-columns:1fr 110px auto}
     }
-    @media (max-width:1100px){.app{width:min(100%,1080px);grid-template-columns:1fr;grid-template-areas:"header" "charts" "income" "moves" "table" "wealth"}.charts{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr 1fr}.move-row{grid-template-columns:1fr 1fr}.extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}.status-row{grid-template-columns:1fr auto auto}}
+    @media (max-width:1100px){
+      .app{
+        width:min(100%,1080px);
+        grid-template-columns:1fr;
+        grid-template-areas:
+          "header"
+          "charts"
+          "income"
+          "moves"
+          "table"
+          "wealth";
+      }
+      .charts{grid-template-columns:1fr}
+      .charts > :first-child{grid-column:auto}
+      .kpi{grid-template-columns:1fr 1fr 1fr}
+      .move-row{grid-template-columns:1fr 1fr}
+      .extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}
+      .status-row{grid-template-columns:1fr auto auto}
+      .pie-wrap{grid-template-columns:1fr}
+    }
     @media (max-width:1450px){
       .move-entry{
         grid-template-columns:1fr 1fr;
@@ -165,8 +217,9 @@
           "bucket"
           "add";
       }
-      .pie-wrap{grid-template-columns:1fr}
       canvas{justify-self:center}
+      .kpi{grid-template-columns:1fr}
+      .bar{grid-template-columns:1fr}
     }
   </style>
 </head>
