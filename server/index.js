@@ -21,6 +21,9 @@ function emptyPayload() {
     transactions: [],
     recurring: [],
     goals: [],
+    transfers: [],
+    auditLog: [],
+    profile: { displayName: "", compactMobile: false, showOnboarding: true },
     assets: [
       { id: "a1", name: "Conto principale", value: 0 }
     ]
