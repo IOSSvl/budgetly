@@ -86,7 +86,7 @@
         "budget bucket add";
     }
     .asset-create{grid-template-columns:minmax(0,1fr) 110px auto}
-    .status-row{grid-template-columns:1fr auto auto}
+    .status-row{grid-template-columns:1fr auto auto auto}
     .move-entry > *, .cat-create > *, .asset-create > *{min-width:0}
     .move-entry #moveDate{grid-area:date}
     .move-entry #moveType{grid-area:type}
@@ -159,7 +159,7 @@
       .kpi{grid-template-columns:1fr 1fr 1fr}
       .move-row{grid-template-columns:1fr 1fr}
       .extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}
-      .status-row{grid-template-columns:1fr auto auto}
+      .status-row{grid-template-columns:1fr auto auto auto}
       .pie-wrap{grid-template-columns:1fr}
     }
     @media (max-width:1450px){
@@ -257,6 +257,7 @@
     <div class="row status-row" style="margin-top:8px">
       <span id="userStatus" class="muted">Connesso</span>
       <button id="saveNowBtn" class="btn-mini">Salva ora</button>
+      <button id="resetAllBtn" class="btn-mini">Resetta tutto</button>
       <button id="logoutBtn" class="btn-mini">Logout</button>
     </div>
   </section>
@@ -793,6 +794,25 @@ $("saveNowBtn").onclick = async () => {
   } catch {
     $("authStatus").textContent = "Errore salvataggio cloud";
     if ($("userStatus")) $("userStatus").textContent = "Errore salvataggio cloud";
+  }
+};
+$("resetAllBtn").onclick = async () => {
+  if (!authToken) return;
+  const first = window.confirm("Vuoi davvero resettare tutto l'account? Questa azione azzera dati, categorie, movimenti e patrimoni.");
+  if (!first) return;
+  const second = window.confirm("Conferma finale: sei sicuro di voler resettare tutto?");
+  if (!second) return;
+  replaceState(createEmptyState());
+  render();
+  $("authStatus").textContent = "Reset eseguito, salvataggio in corso...";
+  if ($("userStatus")) $("userStatus").textContent = "Reset eseguito, salvataggio in corso...";
+  try {
+    await saveCloudNow();
+    $("authStatus").textContent = "Account resettato e sincronizzato";
+    if ($("userStatus")) $("userStatus").textContent = "Account resettato e sincronizzato";
+  } catch {
+    $("authStatus").textContent = "Reset locale eseguito, errore sync cloud";
+    if ($("userStatus")) $("userStatus").textContent = "Reset locale eseguito, errore sync cloud";
   }
 };
 $("logoutBtn").onclick = () => {
