@@ -76,6 +76,9 @@
     .subtle-title{margin-top:14px;color:var(--accent);font:700 16px/1 "Syne",sans-serif}
     .split-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
     .goal-row,.recurring-row{grid-template-columns:minmax(0,1fr) 110px auto}
+    .move-flags{grid-template-columns:auto 1fr}
+    .move-flags label{display:flex;align-items:center;gap:8px;white-space:nowrap}
+    .move-flags input[type="checkbox"]{width:16px;height:16px}
     .actions-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
     .pie-wrap{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
@@ -93,7 +96,7 @@
         "budget bucket add";
     }
     .asset-create{grid-template-columns:minmax(0,1fr) 110px auto}
-    .status-row{grid-template-columns:1fr auto auto auto}
+    .status-row{grid-template-columns:1fr auto auto auto auto}
     .move-entry > *, .cat-create > *, .asset-create > *{min-width:0}
     .move-entry #moveDate{grid-area:date}
     .move-entry #moveType{grid-area:type}
@@ -268,6 +271,7 @@
     <p class="muted">Stipendio per sopravvivenza, extra per svago + risparmio, con quota investimenti lungo termine.</p>
     <div class="row status-row" style="margin-top:8px">
       <span id="userStatus" class="muted">Connesso</span>
+      <span id="todayTracker" class="muted">Oggi --/--/----</span>
       <button id="saveNowBtn" class="btn-mini">Salva ora</button>
       <button id="resetAllBtn" class="btn-mini">Resetta tutto</button>
       <button id="logoutBtn" class="btn-mini">Logout</button>
@@ -367,6 +371,10 @@
     <h2>Movimenti</h2>
     <div class="row move-entry">
       <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="number" min="0" step="1" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
+    </div>
+    <div class="row move-flags" style="margin-top:8px">
+      <label><input id="moveFixedMonthly" type="checkbox"><span>Spesa mensile fissa (es. affitto)</span></label>
+      <span class="muted">Se attiva, questa uscita conta una volta nel mese e non viene proiettata come media giornaliera.</span>
     </div>
     <div class="row recurring-row" style="margin-top:8px">
       <span class="muted">Crea un movimento ricorrente mensile usando i dati compilati sopra.</span>
@@ -526,6 +534,9 @@ function normalizeState() {
     if (typeof e.shipping !== "number") e.shipping = num(e.shipping);
     if (!e.date) e.date = today();
   });
+  state.transactions.forEach((tx)=>{
+    if (typeof tx.fixedMonthly !== "boolean") tx.fixedMonthly = false;
+  });
 }
 
 async function api(path, options = {}) {
@@ -650,10 +661,12 @@ function totals(){
   const spentExtra = essentialBudgetExtra + nonVitalSpentExtra;
   const saveSalary = Math.max(0, salaryAfterInvest - nonVitalSpentSalary);
   const saveExtra = Math.max(0, extraAfterInvest - nonVitalSpentExtra);
-  const monthSpent = sum(expenseTxCurrentMonth, t => num(t.amount));
+  const fixedMonthSpent = sum(expenseTxCurrentMonth.filter(t => t.fixedMonthly), t => num(t.amount));
+  const variableMonthSpent = sum(expenseTxCurrentMonth.filter(t => !t.fixedMonthly), t => num(t.amount));
   const todayDate = new Date();
   const dayOfMonth = Math.max(1, todayDate.getDate());
-  const projectedMonthSpent = (monthSpent / dayOfMonth) * daysInMonth();
+  const projectedVariableMonthSpent = (variableMonthSpent / dayOfMonth) * daysInMonth();
+  const projectedMonthSpent = fixedMonthSpent + projectedVariableMonthSpent;
   const monthForecast = (salary + extraTotal) - projectedMonthSpent;
   const topCategories = Object.entries(byCat)
     .map(([id, amount]) => ({ id, amount: num(amount), name: state.categories.find(c => c.id === id)?.name || "Categoria" }))
@@ -872,7 +885,7 @@ function renderMoves(){
     const cat=state.categories.find(c=>c.id===m.categoryId)?.name||"Categoria";
     const assetName=state.assets.find(a=>a.id===m.assetId)?.name||"Conto principale";
     const row=document.createElement("div"); row.className="row move-row";
-    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-mini" data-mdup="${m.id}">Duplica</button><button class="btn-mini icon-btn" data-mdel="${m.id}" title="Elimina">&#128465;</button></span>`;
+    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})${m.fixedMonthly ? ' · mensile fissa' : ''}</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-mini" data-mdup="${m.id}">Duplica</button><button class="btn-mini icon-btn" data-mdel="${m.id}" title="Elimina">&#128465;</button></span>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-mdup]").forEach(b=>b.onclick=()=>{
@@ -986,6 +999,7 @@ function renderCharts(t){
 function render(){
   ensureRecurringForCurrentMonth();
   const t=totals();
+  $("todayTracker").textContent = `Oggi ${new Date().toLocaleDateString("it-IT")}`;
   setInputValueIfIdle("salary", state.income.salary);
   setInputValueIfIdle("investPct", state.income.investPct);
   setInputValueIfIdle("emergencyTarget", state.income.emergencyTarget);
@@ -1024,10 +1038,12 @@ $("addMove").onclick=async ()=>{
   const amount=num($("moveAmount").value);
   if(!categoryId||!amount)return;
   const asset=state.assets.find(a=>a.id===assetId) || state.assets[0];
+  const fixedMonthly = type === "expense" ? $("moveFixedMonthly").checked : false;
   if (asset) asset.value = type === "income" ? (num(asset.value) + amount) : (num(asset.value) - amount);
-  state.transactions.push({id:uid(),date,desc,type,categoryId,assetId:asset?.id,amount});
+  state.transactions.push({id:uid(),date,desc,type,categoryId,assetId:asset?.id,amount,fixedMonthly});
   $("moveDesc").value="";
   $("moveAmount").value="";
+  $("moveFixedMonthly").checked=false;
   render();
   await forceCloudSave();
 };
