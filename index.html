@@ -53,12 +53,15 @@
     .muted{color:var(--muted);font-size:12px}
     input,select,button{width:100%;border-radius:9px;border:1px solid var(--border);background:#12110f;color:var(--text);font-family:inherit;padding:9px}
     button{cursor:pointer;font-weight:700}.btn-primary{background:var(--accent);color:#1a1508;border-color:#514214}.btn-mini{width:auto;padding:7px 10px}
+    .icon-btn{width:40px;min-width:40px;height:40px;padding:0;display:grid;place-items:center;font-size:18px;line-height:1}
     .row{display:grid;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:10px;background:#161410}
+    .row > *{min-width:0}
     .list{display:grid;gap:8px;margin-top:10px}
     .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
-    .move-row{grid-template-columns:auto 1fr auto auto auto}
-    .cat-row{grid-template-columns:minmax(0,1.3fr) 82px 82px minmax(110px,.9fr) minmax(90px,.8fr) minmax(120px,1fr) 44px;width:100%}
-    .extra-row{grid-template-columns:1fr 120px 90px 90px 90px 90px 90px auto}.wealth-row{grid-template-columns:1fr 120px auto}
+    .move-row{grid-template-columns:110px minmax(0,1fr) auto auto auto}
+    .cat-row{grid-template-columns:minmax(140px,1.2fr) 78px 78px minmax(120px,.95fr) minmax(90px,.8fr) minmax(110px,1fr) 40px;width:100%}
+    .extra-row{grid-template-columns:minmax(140px,1fr) 120px 88px 88px 88px 88px 88px 40px}
+    .wealth-row{grid-template-columns:minmax(0,1fr) 120px 40px}
     .cat-row input[type="text"]{min-width:0}
     .cat-row .cat-toggle{display:flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
     .cat-row .cat-toggle input{width:16px;height:16px}
@@ -72,7 +75,7 @@
     summary{cursor:pointer;color:var(--accent);font-weight:700}
     .subtle-title{margin-top:14px;color:var(--accent);font:700 16px/1 "Syne",sans-serif}
     .split-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
-    .goal-row,.recurring-row{grid-template-columns:1fr 110px auto}
+    .goal-row,.recurring-row{grid-template-columns:minmax(0,1fr) 110px auto}
     .actions-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
     .pie-wrap{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
@@ -145,6 +148,7 @@
           "add add";
       }
       .asset-create{grid-template-columns:1fr 110px auto}
+      .extra-row{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
     @media (max-width:1100px){
       .app{
@@ -162,7 +166,8 @@
       .charts > :first-child{grid-column:auto}
       .kpi{grid-template-columns:repeat(2,minmax(0,1fr))}
       .move-row{grid-template-columns:1fr 1fr}
-      .extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}
+      .extra-row{grid-template-columns:1fr 1fr}
+      .wealth-row{grid-template-columns:1fr 110px 40px}
       .status-row{grid-template-columns:1fr auto auto auto}
       .actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       .pie-wrap{grid-template-columns:1fr}
@@ -211,7 +216,7 @@
       .cat-row [data-catsal], .cat-row [data-catext]{justify-self:start}
       .cat-row [data-catdel]{justify-self:end}
       .status-row{grid-template-columns:1fr;justify-items:start}
-      .move-entry,.asset-create{grid-template-columns:1fr}
+      .move-entry,.asset-create,.goal-row,.recurring-row,.wealth-row{grid-template-columns:1fr}
       .move-entry{
         grid-template-areas:
           "date"
@@ -230,6 +235,7 @@
           "bucket"
           "add";
       }
+      .extra-row{grid-template-columns:1fr}
       .split-grid,.actions-grid{grid-template-columns:1fr}
       canvas{justify-self:center}
       .kpi{grid-template-columns:1fr}
@@ -720,7 +726,7 @@ function renderRecurring() {
     const asset = state.assets.find(a=>a.id===rec.assetId)?.name || "Conto";
     const row = document.createElement("div");
     row.className = "row recurring-row";
-    row.innerHTML = `<span>${rec.desc} <span class="muted">ogni mese il giorno ${rec.day} · ${cat} · ${asset}</span></span><span class="${rec.type === "income" ? "green" : "red"}">${rec.type === "income" ? "+" : "-"}${EUR.format(rec.amount)}</span><button class="btn-mini" data-recdel="${rec.id}">🗑</button>`;
+    row.innerHTML = `<span>${rec.desc} <span class="muted">ogni mese il giorno ${rec.day} · ${cat} · ${asset}</span></span><span class="${rec.type === "income" ? "green" : "red"}">${rec.type === "income" ? "+" : "-"}${EUR.format(rec.amount)}</span><button class="btn-mini icon-btn" data-recdel="${rec.id}" title="Elimina">&#128465;</button>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-recdel]").forEach((btn) => btn.onclick = () => {
@@ -741,7 +747,7 @@ function renderGoals(t) {
     const pct = goal.target ? clampPct((t.totalSave / num(goal.target)) * 100) : 0;
     const row = document.createElement("div");
     row.className = "row";
-    row.innerHTML = `<span><strong>${goal.name}</strong><br><span class="muted">${EUR.format(t.totalSave)} su ${EUR.format(goal.target)}</span></span><span class="${pct >= 100 ? "green" : "blue"}">${Math.round(pct)}%</span><button class="btn-mini" data-goaldel="${goal.id}">🗑</button><div class="progress" style="grid-column:1 / -1"><div style="background:var(--green);width:${pct}%"></div></div>`;
+    row.innerHTML = `<span><strong>${goal.name}</strong><br><span class="muted">${EUR.format(t.totalSave)} su ${EUR.format(goal.target)}</span></span><span class="${pct >= 100 ? "green" : "blue"}">${Math.round(pct)}%</span><button class="btn-mini icon-btn" data-goaldel="${goal.id}" title="Elimina">&#128465;</button><div class="progress" style="grid-column:1 / -1"><div style="background:var(--green);width:${pct}%"></div></div>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-goaldel]").forEach((btn) => btn.onclick = () => {
@@ -785,7 +791,7 @@ function renderExtras(){
   state.extras.forEach(e=>{
     const profit=extraNet(e);
     const row=document.createElement("div"); row.className="row extra-row";
-    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><input type="number" min="0" step="1" value="${e.fees||0}" data-exfees="${e.id}"><input type="number" min="0" step="1" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini" data-exdel="${e.id}">🗑</button>`;
+    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><input type="number" min="0" step="1" value="${e.fees||0}" data-exfees="${e.id}"><input type="number" min="0" step="1" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini icon-btn" data-exdel="${e.id}" title="Elimina">&#128465;</button>`;
     box.appendChild(row);
     row.querySelector(`[data-exstatus="${e.id}"]`).value = e.status || "sold";
   });
@@ -827,7 +833,7 @@ function renderCategories(t){
   state.categories.forEach(c=>{
     const spent=t.byCat[c.id]||0; const left=(c.budget||0)-spent; const ratio = num(c.budget) > 0 ? spent / num(c.budget) : 0;
     const row=document.createElement("div"); row.className="row cat-row";
-    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="number" min="0" step="10" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status"></span><button class="btn-mini" data-catdel="${c.id}" title="Elimina categoria">Del</button>`;
+    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="number" min="0" step="10" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status"></span><button class="btn-mini icon-btn" data-catdel="${c.id}" title="Elimina categoria">&#128465;</button>`;
     box.appendChild(row);
     row.querySelector(`[data-catpurpose="${c.id}"]`).value = c.purpose || "expense";
     const status = row.querySelector('.cat-status');
@@ -866,7 +872,7 @@ function renderMoves(){
     const cat=state.categories.find(c=>c.id===m.categoryId)?.name||"Categoria";
     const assetName=state.assets.find(a=>a.id===m.assetId)?.name||"Conto principale";
     const row=document.createElement("div"); row.className="row move-row";
-    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><span style="display:flex;gap:6px"><button class="btn-mini" data-mdup="${m.id}">Duplica</button><button class="btn-mini" data-mdel="${m.id}">Del</button></span>`;
+    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-mini" data-mdup="${m.id}">Duplica</button><button class="btn-mini icon-btn" data-mdel="${m.id}" title="Elimina">&#128465;</button></span>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-mdup]").forEach(b=>b.onclick=()=>{
@@ -894,7 +900,7 @@ function renderWealth(t){
   const box=$("wealthList"); box.innerHTML="";
   state.assets.forEach(a=>{
     const row=document.createElement("div"); row.className="row wealth-row";
-    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini" data-adel="${a.id}">Del</button>`;
+    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini icon-btn" data-adel="${a.id}" title="Elimina">&#128465;</button>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-aname]").forEach(i=>{
