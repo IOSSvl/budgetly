@@ -673,7 +673,7 @@ function render(){
   const t=totals();
   $("salary").value=state.income.salary; $("investPct").value=state.income.investPct;
   $("extraProfitTotal").textContent=EUR.format(t.extraTotal);
-  $("incomeTotal").textContent=EUR.format(t.totalIncome);
+  $("incomeTotal").textContent=EUR.format(t.netWorth);
   $("salaryTotal").textContent=EUR.format(t.salary);
   $("extraOnlyTotal").textContent=EUR.format(t.extraTotal);
   $("savingsTotal").textContent=EUR.format(t.totalSave);
