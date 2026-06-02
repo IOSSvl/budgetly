@@ -281,6 +281,11 @@ function save() {
   localSave();
   scheduleCloudSave();
 }
+
+function saveDraft() {
+  localSave();
+  scheduleCloudSave();
+}
 state.categories.forEach((c)=>{
   if (typeof c.useSalary !== "boolean") c.useSalary = c.bucket !== "extra";
   if (typeof c.useExtra !== "boolean") c.useExtra = c.bucket !== "salary";
@@ -363,9 +368,18 @@ function renderExtras(){
     row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini" data-exdel="${e.id}">🗑</button>`;
     box.appendChild(row);
   });
-  box.querySelectorAll("[data-exdesc]").forEach(i=>i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;save();});
-  box.querySelectorAll("[data-exbuy]").forEach(i=>i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);render();});
-  box.querySelectorAll("[data-exsell]").forEach(i=>i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);render();});
+  box.querySelectorAll("[data-exdesc]").forEach(i=>{
+    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;saveDraft();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;save();};
+  });
+  box.querySelectorAll("[data-exbuy]").forEach(i=>{
+    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);saveDraft();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);render();};
+  });
+  box.querySelectorAll("[data-exsell]").forEach(i=>{
+    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);saveDraft();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);render();};
+  });
   box.querySelectorAll("[data-exdel]").forEach(b=>b.onclick=()=>{state.extras=state.extras.filter(x=>x.id!==b.dataset.exdel);render();});
 }
 
@@ -378,8 +392,14 @@ function renderCategories(t){
     box.appendChild(row);
     row.querySelector(`[data-catpurpose="${c.id}"]`).value = c.purpose || "expense";
   });
-  box.querySelectorAll("[data-catname]").forEach(i=>i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catname).name=i.value||"Categoria";renderMoveSelect();save();});
-  box.querySelectorAll("[data-catbudget]").forEach(i=>i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);render();});
+  box.querySelectorAll("[data-catname]").forEach(i=>{
+    i.oninput=()=>{state.categories.find(c=>c.id===i.dataset.catname).name=i.value||"Categoria";saveDraft();};
+    i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catname).name=i.value||"Categoria";renderMoveSelect();save();};
+  });
+  box.querySelectorAll("[data-catbudget]").forEach(i=>{
+    i.oninput=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);saveDraft();};
+    i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);render();};
+  });
   box.querySelectorAll("[data-catsal]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catsal).useSalary=ch.checked;render();});
   box.querySelectorAll("[data-catext]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catext).useExtra=ch.checked;render();});
   box.querySelectorAll("[data-catpurpose]").forEach(sel=>sel.onchange=()=>{state.categories.find(c=>c.id===sel.dataset.catpurpose).purpose=sel.value;render();});
@@ -430,8 +450,14 @@ function renderWealth(t){
     row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini" data-adel="${a.id}">🗑</button>`;
     box.appendChild(row);
   });
-  box.querySelectorAll("[data-aname]").forEach(i=>i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aname).name=i.value||"Asset";save();});
-  box.querySelectorAll("[data-aval]").forEach(i=>i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);render();});
+  box.querySelectorAll("[data-aname]").forEach(i=>{
+    i.oninput=()=>{state.assets.find(a=>a.id===i.dataset.aname).name=i.value||"Asset";saveDraft();};
+    i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aname).name=i.value||"Asset";save();};
+  });
+  box.querySelectorAll("[data-aval]").forEach(i=>{
+    i.oninput=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);saveDraft();};
+    i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);render();};
+  });
   box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return;state.assets=state.assets.filter(a=>a.id!==b.dataset.adel);render();});
   $("netWorth").textContent=EUR.format(t.netWorth); $("savedTotal").textContent=EUR.format(t.totalSave); $("investTotal").textContent=EUR.format(t.totalInv);
 }
@@ -506,7 +532,9 @@ function render(){
   save();
 }
 
+$("salary").oninput=e=>{state.income.salary=num(e.target.value);saveDraft();};
 $("salary").onchange=e=>{state.income.salary=num(e.target.value);render();};
+$("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));saveDraft();};
 $("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));render();};
 $("addExtra").onclick=()=>{const d=$("newExtraDesc").value.trim();const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);if(!d)return;state.extras.push({id:uid(),desc:d,buy,sell});$("newExtraDesc").value="";$("newExtraBuy").value="";$("newExtraSell").value="";render();};
 $("moveDate").value=today();
