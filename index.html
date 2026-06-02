@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#11100f">
+  <title>Budgetly</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@500;700;800&display=swap');
+    :root { --bg:#0f0e0d; --surface:#181715; --border:#2d2a26; --accent:#e5be4b; --green:#55c26f; --red:#fa5e56; --blue:#6a90ff; --text:#f4efe5; --muted:#8b836f; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"DM Mono",monospace; color:var(--text); background:radial-gradient(1000px 500px at 20% 0%,#171511 0,transparent 70%),radial-gradient(1000px 500px at 100% 100%,#141923 0,transparent 70%),var(--bg); }
+    .app { max-width:1920px; margin:0 auto; min-height:100vh; padding:18px; display:grid; gap:12px; grid-template-columns:1fr 1.25fr 1.2fr; grid-template-areas:"header charts charts" "income moves table" "wealth wealth wealth"; }
+    .app.hidden { display:none; }
+    .card { border:1px solid #8a71331f; border-radius:14px; background:linear-gradient(160deg,#191714,#11100f); padding:12px; }
+    .auth-screen{min-height:100vh;display:grid;place-items:center;padding:20px}
+    .auth-card{width:min(560px,100%);border:1px solid #8a71331f;border-radius:14px;background:linear-gradient(160deg,#191714,#11100f);padding:16px;display:grid;gap:10px}
+    h1,h2,p { margin:0; }
+    h1 { font:800 40px/1 "Syne",sans-serif; }
+    h2 { font:700 24px/1 "Syne",sans-serif; color:var(--accent); }
+    .header{grid-area:header}.charts{grid-area:charts;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.income{grid-area:income}.moves{grid-area:moves}.table{grid-area:table}.wealth{grid-area:wealth}
+    .label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font:700 30px/1.1 "Syne",sans-serif}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}
+    .muted{color:var(--muted);font-size:12px}
+    input,select,button{width:100%;border-radius:9px;border:1px solid var(--border);background:#12110f;color:var(--text);font-family:inherit;padding:9px}
+    button{cursor:pointer;font-weight:700}.btn-primary{background:var(--accent);color:#1a1508;border-color:#514214}.btn-mini{width:auto;padding:7px 10px}
+    .row{display:grid;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:10px;background:#161410}
+    .list{display:grid;gap:8px;margin-top:10px}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+    .move-row{grid-template-columns:auto 1fr auto auto auto}
+    .cat-row{grid-template-columns:minmax(140px,1.3fr) 82px 82px minmax(120px,1fr) minmax(110px,.9fr) minmax(120px,1fr) 44px}
+    .extra-row{grid-template-columns:1fr 100px 100px 90px auto}.wealth-row{grid-template-columns:1fr 120px auto}
+    .cat-row input[type="text"]{min-width:0}
+    .cat-row .cat-toggle{display:flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
+    .cat-row .cat-toggle input{width:16px;height:16px}
+    .cat-row .cat-status{line-height:1.25;word-break:break-word}
+    .chip{font-size:11px;color:#15110a;background:var(--accent);border-radius:999px;padding:4px 8px}
+    .progress{height:9px;background:#292620;border-radius:999px;overflow:hidden}.progress>div{height:100%}
+    .chart{display:grid;gap:8px}.bar{display:grid;grid-template-columns:130px 1fr 80px;gap:8px;align-items:center}
+    .stack{height:12px;background:#27241f;border-radius:999px;overflow:hidden;display:flex}.seg{height:100%}
+    details{margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px;background:#13120f}
+    summary{cursor:pointer;color:var(--accent);font-weight:700}
+    .pie-wrap{display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center}
+    .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
+    .dot{width:12px;height:12px;border-radius:2px}
+    @media (max-width:1280px){
+      .cat-row{
+        grid-template-columns:1fr 88px 88px 1fr;
+        grid-template-areas:
+          "name sal ext del"
+          "purpose budget status status";
+      }
+      .cat-row [data-catname]{grid-area:name}
+      .cat-row [data-catsal]{grid-area:sal}
+      .cat-row [data-catext]{grid-area:ext}
+      .cat-row [data-catpurpose]{grid-area:purpose}
+      .cat-row [data-catbudget]{grid-area:budget}
+      .cat-row .cat-status{grid-area:status}
+      .cat-row [data-catdel]{grid-area:del;justify-self:end}
+    }
+    @media (max-width:1100px){.app{max-width:1080px;grid-template-columns:1fr;grid-template-areas:"header" "charts" "income" "moves" "table" "wealth"}.charts{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr 1fr}.move-row{grid-template-columns:1fr 1fr}.extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}}
+    @media (max-width:720px){
+      .cat-row{
+        grid-template-columns:1fr 1fr;
+        grid-template-areas:
+          "name name"
+          "sal ext"
+          "purpose budget"
+          "status del";
+      }
+      .cat-row [data-catdel]{justify-self:end}
+    }
+  </style>
+</head>
+<body>
+<section id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1 style="font-size:34px">Budgetly</h1>
+    <p class="muted">Accedi per usare l'app e sincronizzare i tuoi dati.</p>
+    <div class="row" style="grid-template-columns:1fr">
+      <input id="authName" type="text" placeholder="Nome (solo registrazione)">
+      <input id="authEmail" type="email" placeholder="Email">
+      <input id="authPassword" type="password" placeholder="Password">
+      <button id="authAction" class="btn-primary">Login</button>
+    </div>
+    <div class="row" style="grid-template-columns:auto auto 1fr">
+      <button id="registerBtn" class="btn-mini">Registrati</button>
+      <button id="loginBtn" class="btn-mini">Login</button>
+      <span id="authStatus" class="muted">Non autenticato</span>
+    </div>
+  </div>
+</section>
+
+<main class="app hidden" id="appShell">
+  <section class="header card">
+    <h1>Budgetly</h1>
+    <p class="muted">Stipendio per sopravvivenza, extra per svago + risparmio, con quota investimenti lungo termine.</p>
+    <div class="row" style="grid-template-columns:1fr auto;margin-top:8px">
+      <span id="userStatus" class="muted">Connesso</span>
+      <button id="logoutBtn" class="btn-mini">Logout</button>
+    </div>
+  </section>
+
+  <section class="charts">
+    <article class="card chart">
+      <h2>Totale mese</h2>
+      <div class="pie-wrap">
+        <canvas id="totalPie" width="180" height="180"></canvas>
+        <div id="pieLegend" class="list" style="margin-top:0"></div>
+      </div>
+      <div class="bar"><span class="muted">Entrate mese</span><div class="stack"><div class="seg" style="background:#55c26f;width:100%"></div></div><span id="totInVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Uscite mese</span><div class="stack"><div class="seg" style="background:#fa5e56;width:100%"></div></div><span id="totOutVal" class="muted">€0</span></div>
+    </article>
+    <article class="card chart">
+      <h2>Solo stipendio</h2>
+      <div class="bar"><span class="muted">Stipendio netto</span><div class="stack"><div class="seg" style="background:#55c26f;width:100%"></div></div><span id="salNetVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Soldi per spese</span><div class="stack"><div class="seg" id="salSpentBar" style="background:#e5be4b"></div></div><span id="salSpentVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Risparmio</span><div class="stack"><div class="seg" id="salSaveBar" style="background:#55c26f"></div></div><span id="salSaveVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Investimenti</span><div class="stack"><div class="seg" id="salInvBar" style="background:#6a90ff"></div></div><span id="salInvVal" class="muted">€0</span></div>
+    </article>
+    <article class="card chart">
+      <h2>Solo extra</h2>
+      <div class="bar"><span class="muted">Extra totali</span><div class="stack"><div class="seg" style="background:#6a90ff;width:100%"></div></div><span id="extNetVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Soldi per spese</span><div class="stack"><div class="seg" id="extSpentBar" style="background:#fa5e56"></div></div><span id="extSpentVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Risparmio</span><div class="stack"><div class="seg" id="extSaveBar" style="background:#55c26f"></div></div><span id="extSaveVal" class="muted">€0</span></div>
+      <div class="bar"><span class="muted">Investimenti</span><div class="stack"><div class="seg" id="extInvBar" style="background:#6a90ff"></div></div><span id="extInvVal" class="muted">€0</span></div>
+    </article>
+  </section>
+
+  <section class="income card">
+    <h2>Entrate</h2>
+    <div class="list">
+      <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="number" min="0" step="10"></div>
+      <div class="row"><span class="label">Quota investimenti da risparmio (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
+    </div>
+    <p class="label" style="margin-top:10px">Guadagni extra mese (totale)</p>
+    <p class="value blue" id="extraProfitTotal" style="font-size:26px">€0</p>
+    <details>
+      <summary>Apri elenco compravendite</summary>
+      <div id="extraList" class="list"></div>
+      <div class="row" style="grid-template-columns:1fr 100px 100px auto">
+        <input id="newExtraDesc" type="text" placeholder="Oggetto">
+        <input id="newExtraBuy" type="number" min="0" step="10" placeholder="Comprato">
+        <input id="newExtraSell" type="number" min="0" step="10" placeholder="Venduto">
+        <button id="addExtra" class="btn-primary btn-mini">+ Extra</button>
+      </div>
+    </details>
+    <div class="kpi">
+      <div class="card"><p class="label">Extra</p><p class="value green" id="incomeTotal">€0</p></div>
+      <div class="card"><p class="label">Risparmio totale extra</p><p class="value red" id="expenseTotal">€0</p></div>
+      <div class="card"><p class="label">Saldo totale extra</p><p class="value blue" id="balanceTotal">€0</p></div>
+    </div>
+  </section>
+
+  <section class="moves card">
+    <h2>Movimenti</h2>
+    <div class="row" style="grid-template-columns:110px 1fr 120px 140px 150px 110px auto">
+      <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="number" min="0" step="1" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
+    </div>
+    <div class="list" id="movesList"></div>
+  </section>
+
+  <section class="table card">
+    <h2>Budget categorie</h2>
+    <p class="muted">Scegli tu quali categorie pesano sul grafico stipendio e quali sul grafico extra.</p>
+    <div id="catsList" class="list"></div>
+    <div class="row" style="grid-template-columns:1fr 110px 100px auto">
+      <input id="newCatName" type="text" placeholder="Nuova categoria">
+      <input id="newCatBudget" type="number" min="0" step="10" placeholder="Budget">
+      <select id="newCatBucket"><option value="salary">Stipendio</option><option value="extra">Extra</option><option value="mixed">Misto</option></select>
+      <button id="addCat" class="btn-primary btn-mini">+ Categoria</button>
+    </div>
+    <div style="margin-top:8px"><p class="label">Uso budget totale</p><div class="progress"><div id="budgetProgress" style="background:var(--green);width:0%"></div></div></div>
+  </section>
+
+  <section class="wealth card">
+    <h2>Patrimonio</h2>
+    <div id="wealthList" class="list"></div>
+    <div class="row wealth-row"><input id="newAssetName" type="text" placeholder="Nuovo conto / asset"><input id="newAssetValue" type="number" min="0" step="10" placeholder="Valore"><button id="addAsset" class="btn-primary btn-mini">+ Aggiungi</button></div>
+    <div class="kpi">
+      <div class="card"><p class="label">Patrimonio totale</p><p class="value green" id="netWorth">€0</p></div>
+      <div class="card"><p class="label">Risparmio totale</p><p class="value blue" id="savedTotal">€0</p></div>
+      <div class="card"><p class="label">Investimenti LT</p><p class="value" style="color:var(--accent)" id="investTotal">€0</p></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const STORAGE_KEY="budgetly_v3";
+const TOKEN_KEY="budgetly_token";
+const EUR=new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const today=()=>new Date().toISOString().slice(0,10);
+const uid=()=>crypto.randomUUID();
+const $=(id)=>document.getElementById(id);
+const sum=(arr,fn)=>arr.reduce((s,x)=>s+fn(x),0);
+const clampPct=(x)=>Math.max(0,Math.min(100,x));
+const num=(v)=>{
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const s = String(v ?? "").trim().replace(",", ".");
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+function createEmptyState() {
+  return {
+    income: { salary: 0, investPct: 0 },
+    extras: [],
+    categories: [
+      { id: "affitto", name: "Affitto", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
+      { id: "bollette", name: "Bollette", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
+      { id: "spesa", name: "Spesa", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
+      { id: "trasporti", name: "Trasporti", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false },
+      { id: "svago", name: "Svago", budget: 0, bucket: "extra", purpose: "expense", useSalary: false, useExtra: true },
+      { id: "risparmi", name: "Risparmi", budget: 0, bucket: "mixed", purpose: "saving", useSalary: true, useExtra: true },
+      { id: "investimenti", name: "Investimenti", budget: 0, bucket: "mixed", purpose: "invest", useSalary: true, useExtra: true }
+    ],
+    transactions: [],
+    assets: [
+      { id: uid(), name: "Conto principale", value: 0 },
+      { id: uid(), name: "Conto risparmio", value: 0 },
+      { id: uid(), name: "Investimenti", value: 0 }
+    ]
+  };
+}
+
+const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || createEmptyState();
+
+const API_BASE = `${location.origin}/api`;
+let authMode = "login";
+let authToken = localStorage.getItem(TOKEN_KEY) || "";
+let syncTimer = null;
+
+function localSave() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+async function api(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Errore API");
+  return res.json();
+}
+
+function scheduleCloudSave() {
+  if (!authToken) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+      $("authStatus").textContent = "Sincronizzato sul cloud";
+    } catch {
+      $("authStatus").textContent = "Errore sync cloud (dati salvati in locale)";
+    }
+  }, 700);
+}
+
+function save() {
+  localSave();
+  scheduleCloudSave();
+}
+state.categories.forEach((c)=>{
+  if (typeof c.useSalary !== "boolean") c.useSalary = c.bucket !== "extra";
+  if (typeof c.useExtra !== "boolean") c.useExtra = c.bucket !== "salary";
+  if (!c.purpose) {
+    const n = (c.name || "").toLowerCase();
+    c.purpose = n.includes("invest") ? "invest" : (n.includes("rispar") ? "saving" : "expense");
+  }
+});
+
+function totals(){
+  const salary=num(state.income.salary);
+  const extraTotal=sum(state.extras,e=>Math.max(0,num(e.sell)-num(e.buy)));
+  const essentialNames = new Set(["affitto","bollette","spesa","trasporti"]);
+  let essentialBudgetSalary=0,essentialBudgetExtra=0;
+  let nonVitalBudgetSalary=0,nonVitalBudgetExtra=0;
+  const byCat={};
+  state.categories.forEach(c=>byCat[c.id]=0);
+  const txByCat = {};
+  state.transactions.forEach(t=>{
+    byCat[t.categoryId]=(byCat[t.categoryId]||0)+(t.amount||0);
+    txByCat[t.categoryId]=(txByCat[t.categoryId]||0)+(t.amount||0);
+  });
+
+  state.categories.forEach(cat=>{
+    const txAmount = num(txByCat[cat.id]);
+    const budget = Math.max(txAmount, num(cat.budget));
+    if (!budget) return;
+    const useSalary = !!cat.useSalary;
+    const useExtra = !!cat.useExtra;
+    let salPart = 0, extPart = 0;
+    if (useSalary && useExtra) { salPart = budget * 0.5; extPart = budget * 0.5; }
+    else if (useSalary) { salPart = budget; }
+    else if (useExtra) { extPart = budget; }
+    else { salPart = budget; }
+
+    const name = (cat.name || "").trim().toLowerCase();
+    const isEssential = essentialNames.has(name);
+    if (isEssential) {
+      essentialBudgetSalary += salPart;
+      essentialBudgetExtra += extPart;
+    } else {
+      nonVitalBudgetSalary += salPart;
+      nonVitalBudgetExtra += extPart;
+    }
+  });
+
+  const salaryAfterVital = Math.max(0, salary - essentialBudgetSalary);
+  const extraAfterVital = Math.max(0, extraTotal - essentialBudgetExtra);
+  const nonVitalPool = salaryAfterVital + extraAfterVital;
+  const investTotal = nonVitalPool * 0.2;
+  const invSalary = nonVitalPool > 0 ? investTotal * (salaryAfterVital / nonVitalPool) : 0;
+  const invExtra = nonVitalPool > 0 ? investTotal * (extraAfterVital / nonVitalPool) : 0;
+
+  const salaryAfterInvest = Math.max(0, salaryAfterVital - invSalary);
+  const extraAfterInvest = Math.max(0, extraAfterVital - invExtra);
+
+  const nonVitalSpentSalary = Math.min(nonVitalBudgetSalary, salaryAfterInvest);
+  const nonVitalSpentExtra = Math.min(nonVitalBudgetExtra, extraAfterInvest);
+
+  const spentSalary = essentialBudgetSalary + nonVitalSpentSalary;
+  const spentExtra = essentialBudgetExtra + nonVitalSpentExtra;
+  const saveSalary = Math.max(0, salaryAfterInvest - nonVitalSpentSalary);
+  const saveExtra = Math.max(0, extraAfterInvest - nonVitalSpentExtra);
+
+  return {
+    salary,extraTotal,totalIncome:salary+extraTotal,byCat,
+    spentSalary,spentExtra,totalSpent:spentSalary+spentExtra,
+    saveSalary,saveExtra,totalSave:saveSalary+saveExtra,
+    invSalary,invExtra,totalInv:invSalary+invExtra,
+    netWorth:sum(state.assets,a=>num(a.value)),
+    budgetSalary:spentSalary,budgetExtra:spentExtra
+  };
+}
+
+function renderExtras(){
+  const box=$("extraList"); box.innerHTML="";
+  state.extras.forEach(e=>{
+    const profit=Math.max(0,(e.sell||0)-(e.buy||0));
+    const row=document.createElement("div"); row.className="row extra-row";
+    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini" data-exdel="${e.id}">🗑</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-exdesc]").forEach(i=>i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;save();});
+  box.querySelectorAll("[data-exbuy]").forEach(i=>i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);render();});
+  box.querySelectorAll("[data-exsell]").forEach(i=>i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);render();});
+  box.querySelectorAll("[data-exdel]").forEach(b=>b.onclick=()=>{state.extras=state.extras.filter(x=>x.id!==b.dataset.exdel);render();});
+}
+
+function renderCategories(t){
+  const box=$("catsList"); box.innerHTML="";
+  state.categories.forEach(c=>{
+    const spent=t.byCat[c.id]||0; const left=(c.budget||0)-spent;
+    const row=document.createElement("div"); row.className="row cat-row";
+    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="number" min="0" step="10" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status ${left>=0?"green":"red"}">${left>=0?"Residuo":"Sforato"} ${EUR.format(Math.abs(left))}</span><button class="btn-mini" data-catdel="${c.id}" title="Elimina categoria">🗑</button>`;
+    box.appendChild(row);
+    row.querySelector(`[data-catpurpose="${c.id}"]`).value = c.purpose || "expense";
+  });
+  box.querySelectorAll("[data-catname]").forEach(i=>i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catname).name=i.value||"Categoria";renderMoveSelect();save();});
+  box.querySelectorAll("[data-catbudget]").forEach(i=>i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);render();});
+  box.querySelectorAll("[data-catsal]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catsal).useSalary=ch.checked;render();});
+  box.querySelectorAll("[data-catext]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catext).useExtra=ch.checked;render();});
+  box.querySelectorAll("[data-catpurpose]").forEach(sel=>sel.onchange=()=>{state.categories.find(c=>c.id===sel.dataset.catpurpose).purpose=sel.value;render();});
+  box.querySelectorAll("[data-catdel]").forEach(b=>b.onclick=()=>{
+    if(state.categories.length<=1) return;
+    const removedTx = state.transactions.filter(tn=>tn.categoryId===b.dataset.catdel);
+    removedTx.forEach((tx)=>{
+      const asset = state.assets.find(a=>a.id===tx.assetId) || state.assets[0];
+      if (asset) {
+        const amt = num(tx.amount);
+        asset.value = tx.type === "income" ? (num(asset.value) - amt) : (num(asset.value) + amt);
+      }
+    });
+    state.transactions=state.transactions.filter(tn=>tn.categoryId!==b.dataset.catdel);
+    state.categories=state.categories.filter(c=>c.id!==b.dataset.catdel);
+    render();
+  });
+}
+
+function renderMoves(){
+  const box=$("movesList"); box.innerHTML="";
+  [...state.transactions].sort((a,b)=>b.date.localeCompare(a.date)).forEach(m=>{
+    const cat=state.categories.find(c=>c.id===m.categoryId)?.name||"Categoria";
+    const assetName=state.assets.find(a=>a.id===m.assetId)?.name||"Conto principale";
+    const isIncome = m.type === "income";
+    const row=document.createElement("div"); row.className="row move-row";
+    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><button class="btn-mini" data-mdel="${m.id}">🗑</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{
+    const tx=state.transactions.find(t=>t.id===b.dataset.mdel);
+    if (tx) {
+      const asset=state.assets.find(a=>a.id===tx.assetId) || state.assets[0];
+      if (asset) {
+        const amt = num(tx.amount);
+        asset.value = tx.type === "income" ? (num(asset.value) - amt) : (num(asset.value) + amt);
+      }
+    }
+    state.transactions=state.transactions.filter(t=>t.id!==b.dataset.mdel);
+    render();
+  });
+}
+
+function renderWealth(t){
+  const box=$("wealthList"); box.innerHTML="";
+  state.assets.forEach(a=>{
+    const row=document.createElement("div"); row.className="row wealth-row";
+    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini" data-adel="${a.id}">🗑</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-aname]").forEach(i=>i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aname).name=i.value||"Asset";save();});
+  box.querySelectorAll("[data-aval]").forEach(i=>i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);render();});
+  box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return;state.assets=state.assets.filter(a=>a.id!==b.dataset.adel);render();});
+  $("netWorth").textContent=EUR.format(t.netWorth); $("savedTotal").textContent=EUR.format(t.totalSave); $("investTotal").textContent=EUR.format(t.totalInv);
+}
+
+function renderMoveSelect(){
+  const sel=$("moveCat"); sel.innerHTML="";
+  state.categories.forEach(c=>{const op=document.createElement("option"); op.value=c.id; op.textContent=c.name; sel.appendChild(op);});
+  const assetSel=$("moveAsset"); assetSel.innerHTML="";
+  state.assets.forEach(a=>{const op=document.createElement("option"); op.value=a.id; op.textContent=a.name; assetSel.appendChild(op);});
+}
+
+function renderPie(t){
+  const canvas=$("totalPie");
+  const ctx=canvas.getContext("2d");
+  const parts=[
+    {label:"Spese stipendio",value:t.spentSalary,color:"#e5be4b"},
+    {label:"Spese extra",value:t.spentExtra,color:"#fa5e56"},
+    {label:"Risparmio stipendio",value:t.saveSalary,color:"#55c26f"},
+    {label:"Risparmio extra",value:t.saveExtra,color:"#6a90ff"}
+  ].filter(p=>p.value>0);
+  const total=parts.reduce((s,p)=>s+p.value,0)||1;
+  const hoverIndex=Number(canvas.dataset.hoverIndex||-1);
+  ctx.clearRect(0,0,180,180);
+  let start=-Math.PI/2;
+  parts.forEach((p,idx)=>{
+    const angle=(p.value/total)*Math.PI*2; const end=start+angle; const isHover=idx===hoverIndex;
+    const off=isHover?8:0; const mid=(start+end)/2; const cx=90+Math.cos(mid)*off; const cy=90+Math.sin(mid)*off;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,72,start,end); ctx.closePath(); ctx.fillStyle=p.color; ctx.fill(); start=end;
+  });
+  const legend=$("pieLegend"); legend.innerHTML="";
+  parts.forEach((p,idx)=>{const row=document.createElement("div"); row.className="legend-row"; row.innerHTML=`<span class="dot" style="background:${p.color}"></span><span>${p.label}</span><span>${EUR.format(p.value)}</span>`; row.onmouseenter=()=>{canvas.dataset.hoverIndex=idx;renderPie(t)}; row.onmouseleave=()=>{canvas.dataset.hoverIndex=-1;renderPie(t)}; legend.appendChild(row);});
+  canvas.onmousemove=(e)=>{const r=canvas.getBoundingClientRect(); const x=e.clientX-r.left-90; const y=e.clientY-r.top-90; const dist=Math.sqrt(x*x+y*y); if(dist>72){if(canvas.dataset.hoverIndex!=="-1"){canvas.dataset.hoverIndex=-1;renderPie(t);}return;} let a=Math.atan2(y,x)+Math.PI/2; if(a<0)a+=Math.PI*2; let acc=0,found=-1; parts.forEach((p,idx)=>{acc+=(p.value/total)*Math.PI*2; if(found===-1&&a<=acc) found=idx;}); if(String(found)!==canvas.dataset.hoverIndex){canvas.dataset.hoverIndex=found;renderPie(t);} };
+  canvas.onmouseleave=()=>{canvas.dataset.hoverIndex=-1;renderPie(t);};
+}
+
+function renderCharts(t){
+  const set=(id,p)=>$(id).style.width=`${clampPct(p)}%`;
+  $("totInVal").textContent=EUR.format(t.totalIncome); $("totOutVal").textContent=EUR.format(t.totalSpent);
+  $("salNetVal").textContent=EUR.format(t.salary);
+  $("salSpentVal").textContent=EUR.format(t.budgetSalary);
+  $("salSaveVal").textContent=EUR.format(t.saveSalary);
+  $("salInvVal").textContent=EUR.format(t.invSalary);
+  set("salSpentBar",t.salary? (t.budgetSalary/t.salary)*100:0);
+  set("salSaveBar",t.salary? (t.saveSalary/t.salary)*100:0);
+  set("salInvBar",t.salary? (t.invSalary/t.salary)*100:0);
+  $("extNetVal").textContent=EUR.format(t.extraTotal);
+  $("extSpentVal").textContent=EUR.format(t.budgetExtra);
+  $("extSaveVal").textContent=EUR.format(t.saveExtra);
+  $("extInvVal").textContent=EUR.format(t.invExtra);
+  set("extSpentBar",t.extraTotal? (t.budgetExtra/t.extraTotal)*100:0);
+  set("extSaveBar",t.extraTotal? (t.saveExtra/t.extraTotal)*100:0);
+  set("extInvBar",t.extraTotal? (t.invExtra/t.extraTotal)*100:0);
+  renderPie(t);
+}
+
+function render(){
+  const t=totals();
+  $("salary").value=state.income.salary; $("investPct").value=state.income.investPct;
+  $("extraProfitTotal").textContent=EUR.format(t.extraTotal);
+  $("incomeTotal").textContent=EUR.format(t.extraTotal);
+  $("expenseTotal").textContent=EUR.format(t.saveExtra);
+  const extraBalance=t.extraTotal-t.spentExtra;
+  $("balanceTotal").textContent=EUR.format(extraBalance);
+  $("balanceTotal").className=`value ${extraBalance>=0?"blue":"red"}`;
+  renderExtras(); renderMoveSelect(); renderMoves(); renderCategories(t); renderWealth(t); renderCharts(t);
+  const budgetTotalSalary = state.categories.reduce((acc,c)=>{
+    const useSalary = !!c.useSalary;
+    return acc + (useSalary ? (c.budget||0) : 0);
+  },0);
+  const pct=t.salary? (budgetTotalSalary/t.salary)*100:0;
+  $("budgetProgress").style.width=`${clampPct(pct)}%`; $("budgetProgress").style.background=pct>100?"var(--red)":pct>85?"var(--accent)":"var(--green)";
+  save();
+}
+
+$("salary").onchange=e=>{state.income.salary=num(e.target.value);render();};
+$("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));render();};
+$("addExtra").onclick=()=>{const d=$("newExtraDesc").value.trim();const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);if(!d)return;state.extras.push({id:uid(),desc:d,buy,sell});$("newExtraDesc").value="";$("newExtraBuy").value="";$("newExtraSell").value="";render();};
+$("moveDate").value=today();
+$("addMove").onclick=()=>{
+  const date=$("moveDate").value||today();
+  const desc=$("moveDesc").value.trim()||"Spesa";
+  const type=$("moveType").value;
+  const categoryId=$("moveCat").value;
+  const assetId=$("moveAsset").value;
+  const amount=num($("moveAmount").value);
+  if(!categoryId||!amount)return;
+  const asset=state.assets.find(a=>a.id===assetId) || state.assets[0];
+  if (asset) asset.value = type === "income" ? (num(asset.value) + amount) : (num(asset.value) - amount);
+  state.transactions.push({id:uid(),date,desc,type,categoryId,assetId:asset?.id,amount});
+  $("moveDesc").value="";
+  $("moveAmount").value="";
+  render();
+};
+$("addCat").onclick=()=>{const name=$("newCatName").value.trim();const budget=num($("newCatBudget").value);const bucket=$("newCatBucket").value;if(!name)return;const n=name.toLowerCase();const purpose=n.includes("invest")?"invest":(n.includes("rispar")?"saving":"expense");state.categories.push({id:uid(),name,budget,bucket,purpose,useSalary:bucket!=="extra",useExtra:bucket!=="salary"});$("newCatName").value="";$("newCatBudget").value="";render();};
+$("addAsset").onclick=()=>{const name=$("newAssetName").value.trim();const value=num($("newAssetValue").value);if(!name)return;state.assets.push({id:uid(),name,value});$("newAssetName").value="";$("newAssetValue").value="";render();};
+
+async function loadCloudDataIfAvailable() {
+  if (!authToken) return;
+  try {
+    const me = await api("/me");
+    $("authStatus").textContent = `Connesso come ${me.user.name}`;
+    $("userStatus").textContent = `Connesso come ${me.user.name}`;
+    const cloud = await api("/data");
+    if (cloud.payload) {
+      Object.keys(state).forEach((k) => delete state[k]);
+      Object.assign(state, cloud.payload);
+    } else {
+      Object.keys(state).forEach((k) => delete state[k]);
+      Object.assign(state, createEmptyState());
+    }
+  } catch {
+    authToken = "";
+    localStorage.removeItem(TOKEN_KEY);
+    $("authStatus").textContent = "Sessione scaduta, rifai login";
+  }
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  $("authAction").textContent = mode === "register" ? "Crea account" : "Login";
+}
+
+$("registerBtn").onclick = () => setAuthMode("register");
+$("loginBtn").onclick = () => setAuthMode("login");
+$("logoutBtn").onclick = () => {
+  authToken = "";
+  localStorage.removeItem(TOKEN_KEY);
+  $("authStatus").textContent = "Disconnesso";
+  $("authScreen").style.display = "grid";
+  $("appShell").classList.add("hidden");
+};
+$("authAction").onclick = async () => {
+  const name = $("authName").value.trim();
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+  if (!email || !password || (authMode === "register" && !name)) {
+    $("authStatus").textContent = "Compila i campi richiesti";
+    return;
+  }
+  try {
+    const payload = authMode === "register" ? { name, email, password } : { email, password };
+    const endpoint = authMode === "register" ? "/auth/register" : "/auth/login";
+    const result = await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
+    authToken = result.token;
+    localStorage.setItem(TOKEN_KEY, authToken);
+    $("authStatus").textContent = `Connesso come ${result.user.name}`;
+    $("userStatus").textContent = `Connesso come ${result.user.name}`;
+    if (authMode === "register") {
+      Object.keys(state).forEach((k) => delete state[k]);
+      Object.assign(state, createEmptyState());
+      await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+    } else {
+      const cloud = await api("/data");
+      if (cloud.payload) {
+        Object.keys(state).forEach((k) => delete state[k]);
+        Object.assign(state, cloud.payload);
+      } else {
+        Object.keys(state).forEach((k) => delete state[k]);
+        Object.assign(state, createEmptyState());
+      }
+    }
+    $("authScreen").style.display = "none";
+    $("appShell").classList.remove("hidden");
+    render();
+  } catch (err) {
+    $("authStatus").textContent = err.message;
+  }
+};
+
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
+(async () => {
+  await loadCloudDataIfAvailable();
+  if (authToken) {
+    $("authScreen").style.display = "none";
+    $("appShell").classList.remove("hidden");
+    render();
+  } else {
+    $("authScreen").style.display = "grid";
+    $("appShell").classList.add("hidden");
+  }
+})();
+</script>
+</body>
+</html>
