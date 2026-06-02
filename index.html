@@ -44,8 +44,8 @@
     .pie-wrap{display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
     .dot{width:12px;height:12px;border-radius:2px}
-    .move-entry{grid-template-columns:110px minmax(0,1fr) 120px 140px 150px 110px auto}
-    .cat-create{grid-template-columns:minmax(0,1fr) 110px 100px auto}
+    .move-entry{grid-template-columns:95px minmax(0,1fr) 110px 130px 135px 100px auto}
+    .cat-create{grid-template-columns:minmax(0,1fr) 95px 95px auto}
     .asset-create{grid-template-columns:minmax(0,1fr) 110px auto}
     .status-row{grid-template-columns:1fr auto auto}
     .move-entry > *, .cat-create > *, .asset-create > *{min-width:0}
@@ -77,10 +77,35 @@
       .move-entry #moveCat{grid-area:cat}
       .move-entry #moveAsset{grid-area:asset}
       .move-entry #addMove{grid-area:save}
-      .cat-create{grid-template-columns:1fr 110px 100px auto}
+      .cat-create{
+        grid-template-columns:1fr 95px 95px auto;
+        grid-template-areas:
+          "name name name name"
+          "budget bucket add add";
+      }
+      .cat-create #newCatName{grid-area:name}
+      .cat-create #newCatBudget{grid-area:budget}
+      .cat-create #newCatBucket{grid-area:bucket}
+      .cat-create #addCat{grid-area:add}
       .asset-create{grid-template-columns:1fr 110px auto}
     }
     @media (max-width:1100px){.app{width:min(100%,1080px);grid-template-columns:1fr;grid-template-areas:"header" "charts" "income" "moves" "table" "wealth"}.charts{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr 1fr}.move-row{grid-template-columns:1fr 1fr}.extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}.status-row{grid-template-columns:1fr auto auto}}
+    @media (max-width:1450px){
+      .move-entry{
+        grid-template-columns:1fr 1fr 1fr;
+        grid-template-areas:
+          "date type amount"
+          "desc desc desc"
+          "cat asset save";
+      }
+      .move-entry #moveDate{grid-area:date}
+      .move-entry #moveType{grid-area:type}
+      .move-entry #moveAmount{grid-area:amount}
+      .move-entry #moveDesc{grid-area:desc}
+      .move-entry #moveCat{grid-area:cat}
+      .move-entry #moveAsset{grid-area:asset}
+      .move-entry #addMove{grid-area:save}
+    }
     @media (max-width:720px){
       .cat-row{
         grid-template-columns:1fr 1fr;
@@ -92,7 +117,15 @@
       }
       .cat-row [data-catdel]{justify-self:end}
       .status-row{grid-template-columns:1fr;justify-items:start}
-      .move-entry,.cat-create,.asset-create{grid-template-columns:1fr}
+      .move-entry,.asset-create{grid-template-columns:1fr}
+      .cat-create{
+        grid-template-columns:1fr;
+        grid-template-areas:
+          "name"
+          "budget"
+          "bucket"
+          "add";
+      }
       .pie-wrap{grid-template-columns:1fr}
       canvas{justify-self:center}
     }
