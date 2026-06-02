@@ -95,8 +95,9 @@
   <section class="header card">
     <h1>Budgetly</h1>
     <p class="muted">Stipendio per sopravvivenza, extra per svago + risparmio, con quota investimenti lungo termine.</p>
-    <div class="row" style="grid-template-columns:1fr auto;margin-top:8px">
+    <div class="row" style="grid-template-columns:1fr auto auto;margin-top:8px">
       <span id="userStatus" class="muted">Connesso</span>
+      <button id="saveNowBtn" class="btn-mini">Salva ora</button>
       <button id="logoutBtn" class="btn-mini">Logout</button>
     </div>
   </section>
@@ -624,6 +625,17 @@ function setAuthMode(mode) {
 
 $("registerBtn").onclick = () => setAuthMode("register");
 $("loginBtn").onclick = () => setAuthMode("login");
+$("saveNowBtn").onclick = async () => {
+  if (!authToken) return;
+  $("authStatus").textContent = "Salvataggio in corso...";
+  if ($("userStatus")) $("userStatus").textContent = "Salvataggio in corso...";
+  try {
+    await saveCloudNow();
+  } catch {
+    $("authStatus").textContent = "Errore salvataggio cloud";
+    if ($("userStatus")) $("userStatus").textContent = "Errore salvataggio cloud";
+  }
+};
 $("logoutBtn").onclick = () => {
   authToken = "";
   localStorage.removeItem(TOKEN_KEY);
