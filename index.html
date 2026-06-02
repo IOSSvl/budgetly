@@ -445,6 +445,7 @@ function createEmptyState() {
 }
 
 const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || createEmptyState();
+const DIRTY_KEY = "budgetly_dirty";
 
 const API_BASE = `${location.origin}/api`;
 let authMode = "login";
@@ -463,6 +464,7 @@ function localSave() {
 
 function touchState() {
   localRevision += 1;
+  localStorage.setItem(DIRTY_KEY, "1");
 }
 
 function setInputValueIfIdle(id, value) {
@@ -477,6 +479,11 @@ function markSynced(updatedAt) {
   lastSyncedAt = String(updatedAt);
   localStorage.setItem("budgetly_last_synced_at", lastSyncedAt);
   lastSyncedRevision = localRevision;
+  localStorage.removeItem(DIRTY_KEY);
+}
+
+function hasPendingLocalChanges() {
+  return localStorage.getItem(DIRTY_KEY) === "1";
 }
 
 function replaceState(nextState) {
@@ -514,6 +521,8 @@ function scheduleCloudSave() {
       await saveCloudNow();
     } catch {
       $("authStatus").textContent = "Errore sync cloud (dati salvati in locale)";
+    } finally {
+      syncTimer = null;
     }
   }, 250);
 }
@@ -533,6 +542,8 @@ function saveDraft() {
 async function forceCloudSave() {
   touchState();
   localSave();
+  clearTimeout(syncTimer);
+  syncTimer = null;
   if (!authToken) return;
   try {
     await saveCloudNow();
@@ -1004,6 +1015,12 @@ async function loadCloudDataIfAvailable() {
     const me = await api("/me");
     $("authStatus").textContent = `Connesso come ${me.user.name}`;
     $("userStatus").textContent = `Connesso come ${me.user.name}`;
+    if (hasPendingLocalChanges()) {
+      startCloudPolling();
+      render();
+      await forceCloudSave();
+      return;
+    }
     const cloud = await api("/data");
     if (cloud.payload) {
       replaceState(cloud.payload);
