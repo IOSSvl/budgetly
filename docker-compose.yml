@@ -12,5 +12,19 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./server/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
+  app:
+    image: node:20-alpine
+    container_name: budgetly-app
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    env_file:
+      - .env
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./:/app
+    depends_on:
+      - db
+
 volumes:
   pgdata:
