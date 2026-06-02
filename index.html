@@ -41,19 +41,18 @@
     * { box-sizing:border-box; }
     body { margin:0; font-family:"DM Mono",monospace; color:var(--text); background:radial-gradient(1000px 500px at 15% 0%,color-mix(in srgb, var(--accent) 12%, transparent) 0,transparent 72%),radial-gradient(1000px 600px at 100% 100%,color-mix(in srgb, var(--blue) 10%, transparent) 0,transparent 70%),linear-gradient(180deg,var(--bg-accent),var(--bg)); overflow-x:hidden; transition:background .25s ease,color .25s ease; }
     .app {
-      width:min(100%, 1440px);
+      width:min(100%, 1500px);
       margin:0 auto;
       min-height:100vh;
-      padding:18px;
+      padding:20px;
       display:grid;
-      gap:14px;
-      grid-template-columns:minmax(320px, 0.95fr) minmax(480px, 1.25fr);
+      gap:16px;
+      grid-template-columns:minmax(340px, 400px) minmax(0, 1fr);
       grid-template-areas:
         "header header"
         "charts charts"
         "income moves"
-        "table table"
-        "wealth wealth";
+        "table wealth";
     }
     .app.hidden { display:none; }
     .card { border:1px solid color-mix(in srgb, var(--border) 88%, transparent); border-radius:18px; background:linear-gradient(180deg,var(--surface-strong),var(--surface)); box-shadow:var(--shadow); padding:12px; }
@@ -67,14 +66,15 @@
     .charts{
       grid-area:charts;
       display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:12px;
+      grid-template-columns:1.2fr 1fr 1fr;
+      gap:14px;
       align-items:stretch;
     }
-    .charts > :first-child{
+    .charts > :last-child{
       grid-column:1 / -1;
     }
-    .income{grid-area:income}
+    .income,.moves,.table,.wealth{align-self:start}
+    .income{grid-area:income;position:sticky;top:18px}
     .moves{grid-area:moves}
     .table{grid-area:table}
     .wealth{grid-area:wealth}
@@ -82,7 +82,7 @@
     .muted{color:var(--muted);font-size:12px}
     .help-inline{display:flex;align-items:center;gap:8px}
     .help-btn{width:28px;min-width:28px;height:28px;padding:0;border-radius:999px;background:#1d1a15;color:var(--accent);border:1px solid var(--border);display:grid;place-items:center}
-    .notice{font-size:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:#13120f;color:var(--muted)}
+    .notice{font-size:12px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:color-mix(in srgb, var(--surface-strong) 92%, white 8%);color:var(--muted)}
     .hidden{display:none !important}
     .save-ok{color:var(--green)}
     .save-warn{color:var(--accent)}
@@ -95,7 +95,7 @@
     .row{display:grid;gap:10px;align-items:center;border:1px solid color-mix(in srgb, var(--border) 80%, transparent);border-radius:12px;padding:10px;background:color-mix(in srgb, var(--surface) 92%, white 8%)}
     .row > *{min-width:0}
     .list{display:grid;gap:8px;margin-top:10px}
-    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
     .move-row{grid-template-columns:110px minmax(0,1fr) auto auto auto}
     .cat-row{grid-template-columns:minmax(140px,1.2fr) 78px 78px minmax(120px,.95fr) minmax(90px,.8fr) minmax(110px,1fr) 40px;width:100%}
     .extra-row{grid-template-columns:minmax(140px,1fr) 120px 88px 88px 88px 88px 88px 40px}
@@ -118,7 +118,7 @@
     .move-flags label{display:flex;align-items:center;gap:8px;white-space:nowrap}
     .move-flags input[type="checkbox"]{width:16px;height:16px}
     .actions-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
-    .toolbar-grid{display:grid;grid-template-columns:1.2fr 120px 120px;gap:8px;margin-top:10px}
+    .toolbar-grid{display:grid;grid-template-columns:minmax(240px,1fr) auto auto;gap:8px;margin-top:10px;align-items:center}
     .pie-wrap{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
     .legend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -146,7 +146,9 @@
         "budget bucket add";
     }
     .asset-create{grid-template-columns:minmax(0,1fr) 110px auto}
-    .status-row{grid-template-columns:1fr auto auto auto auto}
+    .status-row{grid-template-columns:repeat(3,max-content) 1fr auto auto auto;gap:8px}
+    .status-row .muted{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb, var(--surface-strong) 94%, white 6%)}
+    .status-row #userStatus{font-weight:500}
     .move-entry > *, .cat-create > *, .asset-create > *{min-width:0}
     .move-entry #moveDate{grid-area:date}
     .move-entry #moveType{grid-area:type}
@@ -167,11 +169,14 @@
     #moveType, #moveCat, #moveAsset, #newCatBucket{
       min-width:0;
     }
-    @media (max-width:1400px){
+    @media (max-width:1380px){
       .app{
-        width:min(100%, 1180px);
-        grid-template-columns:minmax(280px, 0.95fr) minmax(0, 1.05fr);
+        width:min(100%, 1280px);
+        grid-template-columns:minmax(320px, 370px) minmax(0, 1fr);
       }
+      .charts{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .charts > :first-child,
+      .charts > :last-child{grid-column:1 / -1}
       .cat-row{
         grid-template-columns:minmax(0,1fr) 88px 88px 44px;
         grid-template-areas:
@@ -215,15 +220,21 @@
           "table"
           "wealth";
       }
+      .income{position:static}
       .charts{grid-template-columns:1fr}
-      .charts > :first-child{grid-column:auto}
+      .charts > :last-child{grid-column:auto}
       .kpi{grid-template-columns:repeat(2,minmax(0,1fr))}
       .move-row{grid-template-columns:1fr 1fr}
       .extra-row{grid-template-columns:1fr 1fr}
       .wealth-row{grid-template-columns:1fr 110px 40px}
-      .status-row{grid-template-columns:1fr auto auto auto}
+      .status-row{grid-template-columns:repeat(3,minmax(0,max-content)) 1fr}
+      .status-row #saveNowBtn,
+      .status-row #resetAllBtn,
+      .status-row #logoutBtn{grid-column:auto}
       .actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .toolbar-grid,.forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
+      .toolbar-grid{grid-template-columns:1fr 1fr}
+      .toolbar-grid #globalSearch{grid-column:1 / -1}
+      .forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
       .pie-wrap{grid-template-columns:1fr}
     }
     @media (max-width:1450px){
@@ -259,6 +270,9 @@
       }
     }
     @media (max-width:720px){
+      .app{padding:12px;gap:12px}
+      h1{font-size:32px}
+      h2{font-size:22px}
       .cat-row{
         grid-template-columns:1fr 1fr;
         grid-template-areas:
@@ -269,7 +283,14 @@
       }
       .cat-row [data-catsal], .cat-row [data-catext]{justify-self:start}
       .cat-row [data-catdel]{justify-self:end}
-      .status-row{grid-template-columns:1fr;justify-items:start}
+      .status-row{grid-template-columns:1fr 1fr;justify-items:stretch}
+      .status-row .muted{width:100%}
+      .status-row #userStatus{grid-column:1 / -1}
+      .status-row #todayTracker,
+      .status-row #saveStatus{grid-column:auto}
+      .status-row #saveNowBtn,
+      .status-row #resetAllBtn,
+      .status-row #logoutBtn{width:100%}
       .move-entry,.asset-create,.goal-row,.recurring-row,.wealth-row{grid-template-columns:1fr}
       .move-entry{
         grid-template-areas:
@@ -290,10 +311,20 @@
           "add";
       }
       .extra-row{grid-template-columns:1fr}
-      .split-grid,.actions-grid,.toolbar-grid,.forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
+      .split-grid,.forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
+      .actions-grid,.toolbar-grid{grid-template-columns:1fr 1fr}
+      .toolbar-grid #globalSearch{grid-column:1 / -1}
       canvas{justify-self:center}
-      .kpi{grid-template-columns:1fr}
+      .kpi{grid-template-columns:1fr 1fr}
       .bar{grid-template-columns:1fr}
+      #installBanner{flex-direction:column;align-items:flex-start !important}
+    }
+    @media (max-width:560px){
+      .kpi,
+      .actions-grid,
+      .toolbar-grid{grid-template-columns:1fr}
+      .toolbar-grid #globalSearch{grid-column:auto}
+      .status-row{grid-template-columns:1fr}
     }
   </style>
 </head>
