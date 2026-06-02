@@ -72,17 +72,17 @@
     .cat-create #addCat{grid-area:add}
     @media (max-width:1280px){
       .cat-row{
-        grid-template-columns:1fr 88px 88px 1fr;
+        grid-template-columns:1fr 88px 88px 44px;
         grid-template-areas:
           "name sal ext del"
           "purpose budget status status";
       }
       .cat-row [data-catname]{grid-area:name}
-      .cat-row [data-catsal]{grid-area:sal}
-      .cat-row [data-catext]{grid-area:ext}
+      .cat-row [data-catsal]{grid-area:sal;justify-self:center}
+      .cat-row [data-catext]{grid-area:ext;justify-self:center}
       .cat-row [data-catpurpose]{grid-area:purpose}
       .cat-row [data-catbudget]{grid-area:budget}
-      .cat-row .cat-status{grid-area:status}
+      .cat-row .cat-status{grid-area:status;justify-self:start}
       .cat-row [data-catdel]{grid-area:del;justify-self:end}
       .move-entry{
         grid-template-columns:1fr 1fr;
@@ -121,6 +121,7 @@
           "purpose budget"
           "status del";
       }
+      .cat-row [data-catsal], .cat-row [data-catext]{justify-self:start}
       .cat-row [data-catdel]{justify-self:end}
       .status-row{grid-template-columns:1fr;justify-items:start}
       .move-entry,.asset-create{grid-template-columns:1fr}
