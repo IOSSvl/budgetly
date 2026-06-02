@@ -55,7 +55,7 @@
     button{cursor:pointer;font-weight:700}.btn-primary{background:var(--accent);color:#1a1508;border-color:#514214}.btn-mini{width:auto;padding:7px 10px}
     .row{display:grid;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:10px;background:#161410}
     .list{display:grid;gap:8px;margin-top:10px}
-    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
     .move-row{grid-template-columns:auto 1fr auto auto auto}
     .cat-row{grid-template-columns:minmax(0,1.3fr) 82px 82px minmax(110px,.9fr) minmax(90px,.8fr) minmax(120px,1fr) 44px;width:100%}
     .extra-row{grid-template-columns:1fr 100px 100px 90px auto}.wealth-row{grid-template-columns:1fr 120px auto}
@@ -156,7 +156,7 @@
       }
       .charts{grid-template-columns:1fr}
       .charts > :first-child{grid-column:auto}
-      .kpi{grid-template-columns:1fr 1fr 1fr}
+      .kpi{grid-template-columns:repeat(2,minmax(0,1fr))}
       .move-row{grid-template-columns:1fr 1fr}
       .extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}
       .status-row{grid-template-columns:1fr auto auto auto}
@@ -292,8 +292,9 @@
     <h2>Entrate</h2>
     <div class="list">
       <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="number" min="0" step="10"></div>
-      <div class="row"><span class="label">Quota investimenti da risparmio (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
+      <div class="row"><span class="label">Quota investimenti su residuo non vitale (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
     </div>
+    <p class="muted" style="margin-top:8px">La quota investimenti viene presa dopo le spese essenziali e prima di svago e risparmio finale.</p>
     <p class="label" style="margin-top:10px">Guadagni extra mese (totale)</p>
     <p class="value blue" id="extraProfitTotal" style="font-size:26px">€0</p>
     <details>
@@ -307,9 +308,10 @@
       </div>
     </details>
     <div class="kpi">
-      <div class="card"><p class="label">Extra</p><p class="value green" id="incomeTotal">€0</p></div>
-      <div class="card"><p class="label">Risparmio totale extra</p><p class="value red" id="expenseTotal">€0</p></div>
-      <div class="card"><p class="label">Saldo totale extra</p><p class="value blue" id="balanceTotal">€0</p></div>
+      <div class="card"><p class="label">Totale</p><p class="value green" id="incomeTotal">&euro;0</p></div>
+      <div class="card"><p class="label">Stipendio</p><p class="value" id="salaryTotal">&euro;0</p></div>
+      <div class="card"><p class="label">Extra</p><p class="value blue" id="extraOnlyTotal">&euro;0</p></div>
+      <div class="card"><p class="label">Risparmio totale</p><p class="value" id="savingsTotal">&euro;0</p></div>
     </div>
   </section>
 
@@ -488,7 +490,8 @@ function totals(){
   const salaryAfterVital = Math.max(0, salary - essentialBudgetSalary);
   const extraAfterVital = Math.max(0, extraTotal - essentialBudgetExtra);
   const nonVitalPool = salaryAfterVital + extraAfterVital;
-  const investTotal = nonVitalPool * 0.2;
+  const investRate = Math.max(0, Math.min(100, num(state.income.investPct))) / 100;
+  const investTotal = nonVitalPool * investRate;
   const invSalary = nonVitalPool > 0 ? investTotal * (salaryAfterVital / nonVitalPool) : 0;
   const invExtra = nonVitalPool > 0 ? investTotal * (extraAfterVital / nonVitalPool) : 0;
 
@@ -670,11 +673,10 @@ function render(){
   const t=totals();
   $("salary").value=state.income.salary; $("investPct").value=state.income.investPct;
   $("extraProfitTotal").textContent=EUR.format(t.extraTotal);
-  $("incomeTotal").textContent=EUR.format(t.extraTotal);
-  $("expenseTotal").textContent=EUR.format(t.saveExtra);
-  const extraBalance=t.extraTotal-t.spentExtra;
-  $("balanceTotal").textContent=EUR.format(extraBalance);
-  $("balanceTotal").className=`value ${extraBalance>=0?"blue":"red"}`;
+  $("incomeTotal").textContent=EUR.format(t.totalIncome);
+  $("salaryTotal").textContent=EUR.format(t.salary);
+  $("extraOnlyTotal").textContent=EUR.format(t.extraTotal);
+  $("savingsTotal").textContent=EUR.format(t.totalSave);
   renderExtras(); renderMoveSelect(); renderMoves(); renderCategories(t); renderWealth(t); renderCharts(t);
   const budgetTotalSalary = state.categories.reduce((acc,c)=>{
     const useSalary = !!c.useSalary;
