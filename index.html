@@ -29,7 +29,7 @@
     .list{display:grid;gap:8px;margin-top:10px}
     .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
     .move-row{grid-template-columns:auto 1fr auto auto auto}
-    .cat-row{grid-template-columns:minmax(140px,1.3fr) 82px 82px minmax(120px,1fr) minmax(110px,.9fr) minmax(120px,1fr) 44px}
+    .cat-row{grid-template-columns:minmax(0,1.3fr) 82px 82px minmax(110px,.9fr) minmax(90px,.8fr) minmax(120px,1fr) 44px;width:100%}
     .extra-row{grid-template-columns:1fr 100px 100px 90px auto}.wealth-row{grid-template-columns:1fr 120px auto}
     .cat-row input[type="text"]{min-width:0}
     .cat-row .cat-toggle{display:flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
@@ -70,9 +70,9 @@
     .cat-create #newCatBudget{grid-area:budget}
     .cat-create #newCatBucket{grid-area:bucket}
     .cat-create #addCat{grid-area:add}
-    @media (max-width:1280px){
+    @media (max-width:1400px){
       .cat-row{
-        grid-template-columns:1fr 88px 88px 44px;
+        grid-template-columns:minmax(0,1fr) 88px 88px 44px;
         grid-template-areas:
           "name sal ext del"
           "purpose budget status status";
@@ -110,6 +110,28 @@
           "desc desc"
           "cat asset"
           "amount save";
+      }
+    }
+    @media (max-width:980px){
+      .cat-row{
+        grid-template-columns:1fr 1fr;
+        grid-template-areas:
+          "name name"
+          "sal ext"
+          "purpose budget"
+          "status del";
+      }
+      .cat-row [data-catsal], .cat-row [data-catext]{justify-self:start}
+      .cat-row [data-catpurpose], .cat-row [data-catbudget]{width:100%}
+      .cat-row .cat-status{justify-self:start}
+      .cat-row [data-catdel]{justify-self:end;align-self:end}
+      .cat-create{
+        grid-template-columns:1fr;
+        grid-template-areas:
+          "name"
+          "budget"
+          "bucket"
+          "add";
       }
     }
     @media (max-width:720px){
