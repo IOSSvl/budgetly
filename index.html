@@ -923,7 +923,18 @@ function renderWealth(t){
 
 function renderMoveSelect(){
   const sel=$("moveCat"); sel.innerHTML="";
+  const placeholder=document.createElement("option");
+  placeholder.value="";
+  placeholder.textContent="Categoria";
+  placeholder.disabled=true;
+  placeholder.selected=!state.categories.some(c=>c.id===sel.value);
+  sel.appendChild(placeholder);
   state.categories.forEach(c=>{const op=document.createElement("option"); op.value=c.id; op.textContent=c.name; sel.appendChild(op);});
+  if (state.categories.some(c=>c.id===sel.value)) {
+    sel.value = sel.value;
+  } else {
+    sel.value = "";
+  }
   const assetSel=$("moveAsset"); assetSel.innerHTML="";
   state.assets.forEach(a=>{const op=document.createElement("option"); op.value=a.id; op.textContent=a.name; assetSel.appendChild(op);});
 }
