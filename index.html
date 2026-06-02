@@ -454,15 +454,29 @@ let lastSyncedAt = localStorage.getItem("budgetly_last_synced_at") || "";
 let cloudSyncInFlight = false;
 let cloudPollTimer = null;
 let lastDeleted = null;
+let localRevision = 0;
+let lastSyncedRevision = 0;
 
 function localSave() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function touchState() {
+  localRevision += 1;
+}
+
+function setInputValueIfIdle(id, value) {
+  const el = $(id);
+  if (!el) return;
+  if (document.activeElement === el) return;
+  el.value = value;
 }
 
 function markSynced(updatedAt) {
   if (!updatedAt) return;
   lastSyncedAt = String(updatedAt);
   localStorage.setItem("budgetly_last_synced_at", lastSyncedAt);
+  lastSyncedRevision = localRevision;
 }
 
 function replaceState(nextState) {
@@ -480,8 +494,13 @@ async function api(path, options = {}) {
 
 async function saveCloudNow() {
   if (!authToken) return null;
+  const revisionAtStart = localRevision;
   const result = await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
-  markSynced(result.updatedAt);
+  if (revisionAtStart === localRevision) {
+    markSynced(result.updatedAt);
+  } else {
+    scheduleCloudSave();
+  }
   $("authStatus").textContent = "Sincronizzato sul cloud";
   if ($("userStatus")) $("userStatus").textContent = "Connesso e sincronizzato";
   return result;
@@ -500,13 +519,26 @@ function scheduleCloudSave() {
 }
 
 function save() {
+  touchState();
   localSave();
   scheduleCloudSave();
 }
 
 function saveDraft() {
+  touchState();
   localSave();
   scheduleCloudSave();
+}
+
+async function forceCloudSave() {
+  touchState();
+  localSave();
+  if (!authToken) return;
+  try {
+    await saveCloudNow();
+  } catch {
+    $("authStatus").textContent = "Errore sync cloud (dati salvati in locale)";
+  }
 }
 if (!Array.isArray(state.extras)) state.extras = [];
 if (!Array.isArray(state.transactions)) state.transactions = [];
@@ -675,6 +707,7 @@ function renderRecurring() {
     if (!rec) return;
     stashUndo({ type: "ricorrente", payload: rec });
     state.recurring = state.recurring.filter(r=>r.id!==btn.dataset.recdel);
+    save();
     render();
   });
 }
@@ -695,6 +728,7 @@ function renderGoals(t) {
     if (!goal) return;
     stashUndo({ type: "obiettivo", payload: goal });
     state.goals = state.goals.filter(g=>g.id!==btn.dataset.goaldel);
+    save();
     render();
   });
 }
@@ -739,29 +773,30 @@ function renderExtras(){
     i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;save();};
   });
   box.querySelectorAll("[data-exstatus]").forEach(i=>{
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exstatus).status=i.value;render();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exstatus).status=i.value;save();render();};
   });
   box.querySelectorAll("[data-exbuy]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);render();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);save();render();};
   });
   box.querySelectorAll("[data-exsell]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);render();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);save();render();};
   });
   box.querySelectorAll("[data-exfees]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);render();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);save();render();};
   });
   box.querySelectorAll("[data-exship]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);render();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);save();render();};
   });
   box.querySelectorAll("[data-exdel]").forEach(b=>b.onclick=()=>{
     const extra = state.extras.find(x=>x.id===b.dataset.exdel);
     if (!extra) return;
     stashUndo({ type: "extra", payload: extra });
     state.extras=state.extras.filter(x=>x.id!==b.dataset.exdel);
+    save();
     render();
   });
 }
@@ -779,7 +814,7 @@ function renderCategories(t){
     status.className = `cat-status ${left < 0 ? "red" : (ratio >= 0.85 ? "warn" : "green")}`;
     status.innerHTML = `${statusText} ${EUR.format(Math.abs(left))}<br><span class="muted">${c.cadence === "fixed" ? "Fissa" : "Variabile"}</span>`;
     status.title = 'Clicca per cambiare Fissa/Variabile';
-    status.onclick = () => { c.cadence = c.cadence === 'fixed' ? 'variable' : 'fixed'; render(); };
+    status.onclick = () => { c.cadence = c.cadence === 'fixed' ? 'variable' : 'fixed'; save(); render(); };
   });
   box.querySelectorAll("[data-catname]").forEach(i=>{
     i.oninput=()=>{state.categories.find(c=>c.id===i.dataset.catname).name=i.value||"Categoria";saveDraft();};
@@ -787,11 +822,11 @@ function renderCategories(t){
   });
   box.querySelectorAll("[data-catbudget]").forEach(i=>{
     i.oninput=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);saveDraft();};
-    i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);render();};
+    i.onchange=()=>{state.categories.find(c=>c.id===i.dataset.catbudget).budget=num(i.value);save();render();};
   });
-  box.querySelectorAll("[data-catsal]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catsal).useSalary=ch.checked;render();});
-  box.querySelectorAll("[data-catext]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catext).useExtra=ch.checked;render();});
-  box.querySelectorAll("[data-catpurpose]").forEach(sel=>sel.onchange=()=>{state.categories.find(c=>c.id===sel.dataset.catpurpose).purpose=sel.value;render();});
+  box.querySelectorAll("[data-catsal]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catsal).useSalary=ch.checked;save();render();});
+  box.querySelectorAll("[data-catext]").forEach(ch=>ch.onchange=()=>{state.categories.find(c=>c.id===ch.dataset.catext).useExtra=ch.checked;save();render();});
+  box.querySelectorAll("[data-catpurpose]").forEach(sel=>sel.onchange=()=>{state.categories.find(c=>c.id===sel.dataset.catpurpose).purpose=sel.value;save();render();});
   box.querySelectorAll("[data-catdel]").forEach(b=>b.onclick=()=>{
     if(state.categories.length<=1) return;
     const removedTx = state.transactions.filter(tn=>tn.categoryId===b.dataset.catdel);
@@ -799,6 +834,7 @@ function renderCategories(t){
     stashUndo({ type: 'categoria', payload: state.categories.find(c=>c.id===b.dataset.catdel) });
     state.transactions=state.transactions.filter(tn=>tn.categoryId!==b.dataset.catdel);
     state.categories=state.categories.filter(c=>c.id!==b.dataset.catdel);
+    save();
     render();
   });
 }
@@ -818,6 +854,7 @@ function renderMoves(){
     const clone={...tx,id:uid(),date:today()};
     applyTransactionToAsset(clone,1);
     state.transactions.push(clone);
+    save();
     render();
   });
   box.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{
@@ -827,6 +864,7 @@ function renderMoves(){
       applyTransactionToAsset(tx,-1);
     }
     state.transactions=state.transactions.filter(t=>t.id!==b.dataset.mdel);
+    save();
     render();
   });
 }
@@ -844,9 +882,9 @@ function renderWealth(t){
   });
   box.querySelectorAll("[data-aval]").forEach(i=>{
     i.oninput=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);saveDraft();};
-    i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);render();};
+    i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);save();render();};
   });
-  box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return; const asset=state.assets.find(a=>a.id===b.dataset.adel); stashUndo({ type: 'conto', payload: asset }); state.assets=state.assets.filter(a=>a.id!==b.dataset.adel); render();});
+  box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return; const asset=state.assets.find(a=>a.id===b.dataset.adel); stashUndo({ type: 'conto', payload: asset }); state.assets=state.assets.filter(a=>a.id!==b.dataset.adel); save(); render();});
   $("netWorth").textContent=EUR.format(t.netWorth); $("savedTotal").textContent=EUR.format(t.totalSave); $("investTotal").textContent=EUR.format(t.totalInv);
   const emergencyTarget = num(state.income.emergencyTarget);
   const emergencyPct = emergencyTarget ? clampPct((t.totalSave / emergencyTarget) * 100) : 0;
@@ -910,7 +948,9 @@ function renderCharts(t){
 function render(){
   ensureRecurringForCurrentMonth();
   const t=totals();
-  $("salary").value=state.income.salary; $("investPct").value=state.income.investPct; $("emergencyTarget").value = state.income.emergencyTarget;
+  setInputValueIfIdle("salary", state.income.salary);
+  setInputValueIfIdle("investPct", state.income.investPct);
+  setInputValueIfIdle("emergencyTarget", state.income.emergencyTarget);
   $("extraProfitTotal").textContent=EUR.format(t.extraTotal);
   $("incomeTotal").textContent=EUR.format(t.netWorth);
   $("salaryTotal").textContent=EUR.format(t.salary);
@@ -927,18 +967,17 @@ function render(){
   },0);
   const pct=t.salary? (budgetTotalSalary/t.salary)*100:0;
   $("budgetProgress").style.width=`${clampPct(pct)}%`; $("budgetProgress").style.background=pct>100?"var(--red)":pct>85?"var(--accent)":"var(--green)";
-  save();
 }
 
-$("salary").oninput=e=>{state.income.salary=num(e.target.value);saveDraft();};
-$("salary").onchange=e=>{state.income.salary=num(e.target.value);render();};
-$("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));saveDraft();};
-$("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));render();};
-$("emergencyTarget").oninput=e=>{state.income.emergencyTarget=num(e.target.value);saveDraft();};
-$("emergencyTarget").onchange=e=>{state.income.emergencyTarget=num(e.target.value);render();};
-$("addExtra").onclick=()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;state.extras.push({id:uid(),desc:d,status,buy,sell,fees,shipping,date:today()});$("newExtraDesc").value="";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();};
+$("salary").oninput=e=>{state.income.salary=num(e.target.value);saveDraft();render();};
+$("salary").onchange=e=>{state.income.salary=num(e.target.value);save();render();};
+$("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));saveDraft();render();};
+$("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));save();render();};
+$("emergencyTarget").oninput=e=>{state.income.emergencyTarget=num(e.target.value);saveDraft();render();};
+$("emergencyTarget").onchange=e=>{state.income.emergencyTarget=num(e.target.value);save();render();};
+$("addExtra").onclick=async ()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;state.extras.push({id:uid(),desc:d,status,buy,sell,fees,shipping,date:today()});$("newExtraDesc").value="";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();await forceCloudSave();};
 $("moveDate").value=today();
-$("addMove").onclick=()=>{
+$("addMove").onclick=async ()=>{
   const date=$("moveDate").value||today();
   const desc=$("moveDesc").value.trim()||"Spesa";
   const type=$("moveType").value;
@@ -952,11 +991,12 @@ $("addMove").onclick=()=>{
   $("moveDesc").value="";
   $("moveAmount").value="";
   render();
+  await forceCloudSave();
 };
-$("addCat").onclick=()=>{const name=$("newCatName").value.trim();const budget=num($("newCatBudget").value);const bucket=$("newCatBucket").value;if(!name)return;const n=name.toLowerCase();const purpose=n.includes("invest")?"invest":(n.includes("rispar")?"saving":"expense");state.categories.push({id:uid(),name,budget,bucket,purpose,useSalary:bucket!=="extra",useExtra:bucket!=="salary",cadence:"variable"});$("newCatName").value="";$("newCatBudget").value="";render();};
-$("addAsset").onclick=()=>{const name=$("newAssetName").value.trim();const value=num($("newAssetValue").value);if(!name)return;state.assets.push({id:uid(),name,value});$("newAssetName").value="";$("newAssetValue").value="";render();};
-$("addGoal").onclick=()=>{const name=$("newGoalName").value.trim(); const target=num($("newGoalTarget").value); if(!name||!target)return; state.goals.push({id:uid(),name,target}); $("newGoalName").value=""; $("newGoalTarget").value=""; render();};
-$("addRecurring").onclick=()=>{const desc=$("moveDesc").value.trim()||"Movimento ricorrente"; const type=$("moveType").value; const categoryId=$("moveCat").value; const assetId=$("moveAsset").value; const amount=num($("moveAmount").value); const day=Math.max(1,Math.min(31,num($("recurringDay").value)||new Date().getDate())); if(!categoryId||!amount)return; state.recurring.push({id:uid(),desc,type,categoryId,assetId,amount,day}); $("recurringDay").value=""; render();};
+$("addCat").onclick=async ()=>{const name=$("newCatName").value.trim();const budget=num($("newCatBudget").value);const bucket=$("newCatBucket").value;if(!name)return;const n=name.toLowerCase();const purpose=n.includes("invest")?"invest":(n.includes("rispar")?"saving":"expense");state.categories.push({id:uid(),name,budget,bucket,purpose,useSalary:bucket!=="extra",useExtra:bucket!=="salary",cadence:"variable"});$("newCatName").value="";$("newCatBudget").value="";render();await forceCloudSave();};
+$("addAsset").onclick=async ()=>{const name=$("newAssetName").value.trim();const value=num($("newAssetValue").value);if(!name)return;state.assets.push({id:uid(),name,value});$("newAssetName").value="";$("newAssetValue").value="";render();await forceCloudSave();};
+$("addGoal").onclick=async ()=>{const name=$("newGoalName").value.trim(); const target=num($("newGoalTarget").value); if(!name||!target)return; state.goals.push({id:uid(),name,target}); $("newGoalName").value=""; $("newGoalTarget").value=""; render(); await forceCloudSave();};
+$("addRecurring").onclick=async ()=>{const desc=$("moveDesc").value.trim()||"Movimento ricorrente"; const type=$("moveType").value; const categoryId=$("moveCat").value; const assetId=$("moveAsset").value; const amount=num($("moveAmount").value); const day=Math.max(1,Math.min(31,num($("recurringDay").value)||new Date().getDate())); if(!categoryId||!amount)return; state.recurring.push({id:uid(),desc,type,categoryId,assetId,amount,day}); $("recurringDay").value=""; render(); await forceCloudSave();};
 
 async function loadCloudDataIfAvailable() {
   if (!authToken) return;
@@ -980,6 +1020,7 @@ async function loadCloudDataIfAvailable() {
 
 async function refreshFromCloud(force = false) {
   if (!authToken || cloudSyncInFlight) return;
+  if (!force && (localRevision !== lastSyncedRevision || syncTimer)) return;
   cloudSyncInFlight = true;
   try {
     const cloud = await api("/data");
@@ -1067,14 +1108,15 @@ $("importFile").onchange = async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
   const content = await file.text();
-  if (file.name.toLowerCase().endswith('.json')) {
+  if (file.name.toLowerCase().endsWith('.json')) {
     const parsed = JSON.parse(content);
     replaceState(parsed);
     render();
+    await forceCloudSave();
   }
   e.target.value = '';
 };
-$("undoDeleteBtn").onclick = () => {
+$("undoDeleteBtn").onclick = async () => {
   if (!lastDeleted) return;
   const { type, payload } = lastDeleted;
   if (type === 'movimento') { state.transactions.push(payload); applyTransactionToAsset(payload,1); }
@@ -1086,6 +1128,7 @@ $("undoDeleteBtn").onclick = () => {
   lastDeleted = null;
   $("undoDeleteBtn").textContent = 'Annulla elimina';
   render();
+  await forceCloudSave();
 };
 $("logoutBtn").onclick = () => {
   authToken = "";
