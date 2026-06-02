@@ -553,6 +553,9 @@ async function forceCloudSave() {
 }
 if (!Array.isArray(state.extras)) state.extras = [];
 if (!Array.isArray(state.transactions)) state.transactions = [];
+if (!Array.isArray(state.categories) || !state.categories.length) {
+  state.categories = [{ id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }];
+}
 if (!Array.isArray(state.assets) || !state.assets.length) state.assets = [{ id: uid(), name: "Conto principale", value: 0 }];
 if (!Array.isArray(state.goals)) state.goals = [];
 if (!Array.isArray(state.recurring)) state.recurring = [];
