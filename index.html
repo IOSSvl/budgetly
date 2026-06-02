@@ -49,7 +49,7 @@
     .moves{grid-area:moves}
     .table{grid-area:table}
     .wealth{grid-area:wealth}
-    .label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font:700 30px/1.1 "Syne",sans-serif}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}
+    .label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font:700 30px/1.1 "Syne",sans-serif}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}.warn{color:var(--accent)}
     .muted{color:var(--muted);font-size:12px}
     input,select,button{width:100%;border-radius:9px;border:1px solid var(--border);background:#12110f;color:var(--text);font-family:inherit;padding:9px}
     button{cursor:pointer;font-weight:700}.btn-primary{background:var(--accent);color:#1a1508;border-color:#514214}.btn-mini{width:auto;padding:7px 10px}
@@ -58,7 +58,7 @@
     .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
     .move-row{grid-template-columns:auto 1fr auto auto auto}
     .cat-row{grid-template-columns:minmax(0,1.3fr) 82px 82px minmax(110px,.9fr) minmax(90px,.8fr) minmax(120px,1fr) 44px;width:100%}
-    .extra-row{grid-template-columns:1fr 100px 100px 90px auto}.wealth-row{grid-template-columns:1fr 120px auto}
+    .extra-row{grid-template-columns:1fr 120px 90px 90px 90px 90px 90px auto}.wealth-row{grid-template-columns:1fr 120px auto}
     .cat-row input[type="text"]{min-width:0}
     .cat-row .cat-toggle{display:flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
     .cat-row .cat-toggle input{width:16px;height:16px}
@@ -70,6 +70,10 @@
     .stack{height:12px;background:#27241f;border-radius:999px;overflow:hidden;display:flex}.seg{height:100%}
     details{margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px;background:#13120f}
     summary{cursor:pointer;color:var(--accent);font-weight:700}
+    .subtle-title{margin-top:14px;color:var(--accent);font:700 16px/1 "Syne",sans-serif}
+    .split-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+    .goal-row,.recurring-row{grid-template-columns:1fr 110px auto}
+    .actions-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
     .pie-wrap{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
     .dot{width:12px;height:12px;border-radius:2px}
@@ -160,6 +164,7 @@
       .move-row{grid-template-columns:1fr 1fr}
       .extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}
       .status-row{grid-template-columns:1fr auto auto auto}
+      .actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       .pie-wrap{grid-template-columns:1fr}
     }
     @media (max-width:1450px){
@@ -225,6 +230,7 @@
           "bucket"
           "add";
       }
+      .split-grid,.actions-grid{grid-template-columns:1fr}
       canvas{justify-self:center}
       .kpi{grid-template-columns:1fr}
       .bar{grid-template-columns:1fr}
@@ -260,6 +266,13 @@
       <button id="resetAllBtn" class="btn-mini">Resetta tutto</button>
       <button id="logoutBtn" class="btn-mini">Logout</button>
     </div>
+    <div class="actions-grid">
+      <button id="exportJsonBtn" class="btn-mini">Export JSON</button>
+      <button id="exportCsvBtn" class="btn-mini">Export CSV</button>
+      <button id="importBtn" class="btn-mini">Importa dati</button>
+      <button id="undoDeleteBtn" class="btn-mini">Annulla elimina</button>
+    </div>
+    <input id="importFile" type="file" accept=".json,.csv" hidden>
   </section>
 
   <section class="charts">
@@ -293,6 +306,7 @@
     <div class="list">
       <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="number" min="0" step="10"></div>
       <div class="row"><span class="label">Quota investimenti su residuo non vitale (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
+      <div class="row"><span class="label">Target fondo emergenza</span><input id="emergencyTarget" type="number" min="0" step="10"></div>
     </div>
     <p class="muted" style="margin-top:8px">La quota investimenti viene presa dopo le spese essenziali e prima di svago e risparmio finale.</p>
     <p class="label" style="margin-top:10px">Guadagni extra mese (totale)</p>
@@ -300,10 +314,13 @@
     <details>
       <summary>Apri elenco compravendite</summary>
       <div id="extraList" class="list"></div>
-      <div class="row" style="grid-template-columns:1fr 100px 100px auto">
+      <div class="row" style="grid-template-columns:1fr 120px 90px 90px 90px 90px auto">
         <input id="newExtraDesc" type="text" placeholder="Oggetto">
+        <select id="newExtraStatus"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select>
         <input id="newExtraBuy" type="number" min="0" step="10" placeholder="Comprato">
         <input id="newExtraSell" type="number" min="0" step="10" placeholder="Venduto">
+        <input id="newExtraFees" type="number" min="0" step="1" placeholder="Comm.">
+        <input id="newExtraShip" type="number" min="0" step="1" placeholder="Sped.">
         <button id="addExtra" class="btn-primary btn-mini">+ Extra</button>
       </div>
     </details>
@@ -313,6 +330,31 @@
       <div class="card"><p class="label">Extra</p><p class="value blue" id="extraOnlyTotal">&euro;0</p></div>
       <div class="card"><p class="label">Risparmio totale</p><p class="value" id="savingsTotal">&euro;0</p></div>
     </div>
+    <p class="subtle-title">Previsioni</p>
+    <div class="split-grid">
+      <div class="card"><p class="label">Previsione fine mese</p><p class="value" id="monthForecast">&euro;0</p></div>
+      <div class="card"><p class="label">Target investimenti automatico</p><p class="value blue" id="investTargetAuto">&euro;0</p></div>
+      <div class="card"><p class="label">Profitto extra mese</p><p class="value green" id="profitMonth">&euro;0</p></div>
+      <div class="card"><p class="label">Profitto extra anno</p><p class="value green" id="profitYear">&euro;0</p></div>
+    </div>
+    <p class="subtle-title">Obiettivi</p>
+    <div class="split-grid">
+      <div class="card">
+        <p class="label">Fondo emergenza</p>
+        <p class="value" id="emergencyProgressValue">&euro;0</p>
+        <div class="progress" style="margin-top:8px"><div id="emergencyProgress" style="background:var(--accent);width:0%"></div></div>
+      </div>
+      <div class="card">
+        <p class="label">Entrate vs uscite per fonte</p>
+        <p class="muted" id="sourceBreakdown">Stipendio €0 / Extra €0 / Uscite €0</p>
+      </div>
+    </div>
+    <div id="goalsList" class="list"></div>
+    <div class="row goal-row">
+      <input id="newGoalName" type="text" placeholder="Nuovo obiettivo risparmio">
+      <input id="newGoalTarget" type="number" min="0" step="10" placeholder="Target">
+      <button id="addGoal" class="btn-primary btn-mini">+ Obiettivo</button>
+    </div>
   </section>
 
   <section class="moves card">
@@ -320,7 +362,16 @@
     <div class="row move-entry">
       <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="number" min="0" step="1" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
     </div>
+    <div class="row recurring-row" style="margin-top:8px">
+      <span class="muted">Crea un movimento ricorrente mensile usando i dati compilati sopra.</span>
+      <input id="recurringDay" type="number" min="1" max="31" placeholder="Giorno">
+      <button id="addRecurring" class="btn-mini">+ Ricorrente</button>
+    </div>
     <div class="list" id="movesList"></div>
+    <details>
+      <summary>Apri ricorrenti mensili</summary>
+      <div id="recurringList" class="list"></div>
+    </details>
   </section>
 
   <section class="table card">
@@ -334,6 +385,8 @@
       <button id="addCat" class="btn-primary btn-mini">+ Categoria</button>
     </div>
     <div style="margin-top:8px"><p class="label">Uso budget totale</p><div class="progress"><div id="budgetProgress" style="background:var(--green);width:0%"></div></div></div>
+    <p class="subtle-title">Top categorie spesa</p>
+    <div id="topCategories" class="list"></div>
   </section>
 
   <section class="wealth card">
@@ -357,21 +410,34 @@ const uid=()=>crypto.randomUUID();
 const $=(id)=>document.getElementById(id);
 const sum=(arr,fn)=>arr.reduce((s,x)=>s+fn(x),0);
 const clampPct=(x)=>Math.max(0,Math.min(100,x));
+const monthKey=(d=today())=>String(d).slice(0,7);
+const yearKey=(d=today())=>String(d).slice(0,4);
+const daysInMonth=(d=today())=>new Date(Number(String(d).slice(0,4)), Number(String(d).slice(5,7)), 0).getDate();
+const recurringDate=(baseDate, day)=>{
+  const year = Number(String(baseDate).slice(0,4));
+  const month = Number(String(baseDate).slice(5,7));
+  const lastDay = new Date(year, month, 0).getDate();
+  const safeDay = Math.max(1, Math.min(lastDay, num(day) || 1));
+  return `${year}-${String(month).padStart(2,"0")}-${String(safeDay).padStart(2,"0")}`;
+};
 const num=(v)=>{
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const s = String(v ?? "").trim().replace(",", ".");
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 };
+const extraNet=(e)=>Math.max(0, num(e.sell) - num(e.buy) - num(e.fees) - num(e.shipping));
 
 function createEmptyState() {
   return {
-    income: { salary: 0, investPct: 0 },
+    income: { salary: 0, investPct: 0, emergencyTarget: 0 },
     extras: [],
     categories: [
-      { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false }
+      { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }
     ],
     transactions: [],
+    recurring: [],
+    goals: [],
     assets: [
       { id: uid(), name: "Conto principale", value: 0 }
     ]
@@ -387,6 +453,7 @@ let syncTimer = null;
 let lastSyncedAt = localStorage.getItem("budgetly_last_synced_at") || "";
 let cloudSyncInFlight = false;
 let cloudPollTimer = null;
+let lastDeleted = null;
 
 function localSave() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -441,27 +508,46 @@ function saveDraft() {
   localSave();
   scheduleCloudSave();
 }
+if (!Array.isArray(state.extras)) state.extras = [];
+if (!Array.isArray(state.transactions)) state.transactions = [];
+if (!Array.isArray(state.assets) || !state.assets.length) state.assets = [{ id: uid(), name: "Conto principale", value: 0 }];
+if (!Array.isArray(state.goals)) state.goals = [];
+if (!Array.isArray(state.recurring)) state.recurring = [];
+if (!state.income || typeof state.income !== "object") state.income = { salary: 0, investPct: 0, emergencyTarget: 0 };
+if (typeof state.income.emergencyTarget !== "number") state.income.emergencyTarget = num(state.income.emergencyTarget);
 state.categories.forEach((c)=>{
   if (typeof c.useSalary !== "boolean") c.useSalary = c.bucket !== "extra";
   if (typeof c.useExtra !== "boolean") c.useExtra = c.bucket !== "salary";
+  if (!c.cadence) c.cadence = "variable";
   if (!c.purpose) {
     const n = (c.name || "").toLowerCase();
     c.purpose = n.includes("invest") ? "invest" : (n.includes("rispar") ? "saving" : "expense");
   }
 });
+state.extras.forEach((e)=>{
+  if (!e.status) e.status = "sold";
+  if (typeof e.fees !== "number") e.fees = num(e.fees);
+  if (typeof e.shipping !== "number") e.shipping = num(e.shipping);
+  if (!e.date) e.date = today();
+});
 
 function totals(){
   const salary=num(state.income.salary);
-  const extraTotal=sum(state.extras,e=>Math.max(0,num(e.sell)-num(e.buy)));
+  const currentMonth = monthKey();
+  const currentYear = yearKey();
+  const soldExtras = state.extras.filter(e => e.status === "sold");
+  const extraTotal=sum(soldExtras,e=>extraNet(e));
   const essentialNames = new Set(["affitto","bollette","spesa","trasporti"]);
   let essentialBudgetSalary=0,essentialBudgetExtra=0;
   let nonVitalBudgetSalary=0,nonVitalBudgetExtra=0;
   const byCat={};
   state.categories.forEach(c=>byCat[c.id]=0);
   const txByCat = {};
+  const expenseTxCurrentMonth = [];
   state.transactions.forEach(t=>{
     byCat[t.categoryId]=(byCat[t.categoryId]||0)+(t.amount||0);
     txByCat[t.categoryId]=(txByCat[t.categoryId]||0)+(t.amount||0);
+    if (t.type === "expense" && String(t.date || "").startsWith(currentMonth)) expenseTxCurrentMonth.push(t);
   });
 
   state.categories.forEach(cat=>{
@@ -505,6 +591,18 @@ function totals(){
   const spentExtra = essentialBudgetExtra + nonVitalSpentExtra;
   const saveSalary = Math.max(0, salaryAfterInvest - nonVitalSpentSalary);
   const saveExtra = Math.max(0, extraAfterInvest - nonVitalSpentExtra);
+  const monthSpent = sum(expenseTxCurrentMonth, t => num(t.amount));
+  const todayDate = new Date();
+  const dayOfMonth = Math.max(1, todayDate.getDate());
+  const projectedMonthSpent = (monthSpent / dayOfMonth) * daysInMonth();
+  const monthForecast = (salary + extraTotal) - projectedMonthSpent;
+  const topCategories = Object.entries(byCat)
+    .map(([id, amount]) => ({ id, amount: num(amount), name: state.categories.find(c => c.id === id)?.name || "Categoria" }))
+    .filter(x => x.amount > 0)
+    .sort((a,b)=>b.amount-a.amount)
+    .slice(0,3);
+  const profitMonth = sum(soldExtras.filter(e => String(e.date || "").startsWith(currentMonth)), e => extraNet(e));
+  const profitYear = sum(soldExtras.filter(e => String(e.date || "").startsWith(currentYear)), e => extraNet(e));
 
   return {
     salary,extraTotal,totalIncome:salary+extraTotal,byCat,
@@ -512,21 +610,136 @@ function totals(){
     saveSalary,saveExtra,totalSave:saveSalary+saveExtra,
     invSalary,invExtra,totalInv:invSalary+invExtra,
     netWorth:sum(state.assets,a=>num(a.value)),
-    budgetSalary:spentSalary,budgetExtra:spentExtra
+    budgetSalary:spentSalary,budgetExtra:spentExtra,
+    monthForecast,
+    investAutoTarget: investTotal,
+    topCategories,
+    profitMonth,
+    profitYear
   };
+}
+
+function applyTransactionToAsset(tx, direction = 1) {
+  const asset = state.assets.find(a=>a.id===tx.assetId) || state.assets[0];
+  if (!asset) return;
+  const amt = num(tx.amount);
+  asset.value = tx.type === "income"
+    ? (num(asset.value) + amt * direction)
+    : (num(asset.value) - amt * direction);
+}
+
+function stashUndo(entry) {
+  lastDeleted = entry;
+  const btn = $("undoDeleteBtn");
+  if (btn) btn.textContent = `Annulla ${entry.type}`;
+}
+
+function ensureRecurringForCurrentMonth() {
+  const current = monthKey();
+  let changed = false;
+  state.recurring.forEach((rec) => {
+    const exists = state.transactions.some(t => t.recurringId === rec.id && t.recurringMonth === current);
+    if (exists) return;
+    const tx = {
+      id: uid(),
+      date: recurringDate(today(), rec.day),
+      desc: rec.desc,
+      type: rec.type,
+      categoryId: rec.categoryId,
+      assetId: rec.assetId,
+      amount: num(rec.amount),
+      recurringId: rec.id,
+      recurringMonth: current
+    };
+    state.transactions.push(tx);
+    applyTransactionToAsset(tx, 1);
+    changed = true;
+  });
+  if (changed) save();
+}
+
+function renderRecurring() {
+  const box = $("recurringList");
+  if (!box) return;
+  box.innerHTML = "";
+  state.recurring.forEach((rec) => {
+    const cat = state.categories.find(c=>c.id===rec.categoryId)?.name || "Categoria";
+    const asset = state.assets.find(a=>a.id===rec.assetId)?.name || "Conto";
+    const row = document.createElement("div");
+    row.className = "row recurring-row";
+    row.innerHTML = `<span>${rec.desc} <span class="muted">ogni mese il giorno ${rec.day} · ${cat} · ${asset}</span></span><span class="${rec.type === "income" ? "green" : "red"}">${rec.type === "income" ? "+" : "-"}${EUR.format(rec.amount)}</span><button class="btn-mini" data-recdel="${rec.id}">🗑</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-recdel]").forEach((btn) => btn.onclick = () => {
+    const rec = state.recurring.find(r=>r.id===btn.dataset.recdel);
+    if (!rec) return;
+    stashUndo({ type: "ricorrente", payload: rec });
+    state.recurring = state.recurring.filter(r=>r.id!==btn.dataset.recdel);
+    render();
+  });
+}
+
+function renderGoals(t) {
+  const box = $("goalsList");
+  if (!box) return;
+  box.innerHTML = "";
+  state.goals.forEach((goal) => {
+    const pct = goal.target ? clampPct((t.totalSave / num(goal.target)) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span><strong>${goal.name}</strong><br><span class="muted">${EUR.format(t.totalSave)} su ${EUR.format(goal.target)}</span></span><span class="${pct >= 100 ? "green" : "blue"}">${Math.round(pct)}%</span><button class="btn-mini" data-goaldel="${goal.id}">🗑</button><div class="progress" style="grid-column:1 / -1"><div style="background:var(--green);width:${pct}%"></div></div>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-goaldel]").forEach((btn) => btn.onclick = () => {
+    const goal = state.goals.find(g=>g.id===btn.dataset.goaldel);
+    if (!goal) return;
+    stashUndo({ type: "obiettivo", payload: goal });
+    state.goals = state.goals.filter(g=>g.id!==btn.dataset.goaldel);
+    render();
+  });
+}
+
+function renderTopCategories(t) {
+  const box = $("topCategories");
+  if (!box) return;
+  box.innerHTML = "";
+  if (!t.topCategories.length) {
+    box.innerHTML = `<div class="row"><span class="muted">Nessuna spesa registrata ancora.</span></div>`;
+    return;
+  }
+  t.topCategories.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span>#${index + 1} ${item.name}</span><span class="muted">${EUR.format(item.amount)}</span>`;
+    box.appendChild(row);
+  });
+}
+
+function downloadFile(name, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderExtras(){
   const box=$("extraList"); box.innerHTML="";
   state.extras.forEach(e=>{
-    const profit=Math.max(0,(e.sell||0)-(e.buy||0));
+    const profit=extraNet(e);
     const row=document.createElement("div"); row.className="row extra-row";
-    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini" data-exdel="${e.id}">🗑</button>`;
+    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><input type="number" min="0" step="1" value="${e.fees||0}" data-exfees="${e.id}"><input type="number" min="0" step="1" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini" data-exdel="${e.id}">🗑</button>`;
     box.appendChild(row);
+    row.querySelector(`[data-exstatus="${e.id}"]`).value = e.status || "sold";
   });
   box.querySelectorAll("[data-exdesc]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;saveDraft();};
     i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;save();};
+  });
+  box.querySelectorAll("[data-exstatus]").forEach(i=>{
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exstatus).status=i.value;render();};
   });
   box.querySelectorAll("[data-exbuy]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);saveDraft();};
@@ -536,17 +749,37 @@ function renderExtras(){
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);saveDraft();};
     i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);render();};
   });
-  box.querySelectorAll("[data-exdel]").forEach(b=>b.onclick=()=>{state.extras=state.extras.filter(x=>x.id!==b.dataset.exdel);render();});
+  box.querySelectorAll("[data-exfees]").forEach(i=>{
+    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);saveDraft();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);render();};
+  });
+  box.querySelectorAll("[data-exship]").forEach(i=>{
+    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);saveDraft();};
+    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);render();};
+  });
+  box.querySelectorAll("[data-exdel]").forEach(b=>b.onclick=()=>{
+    const extra = state.extras.find(x=>x.id===b.dataset.exdel);
+    if (!extra) return;
+    stashUndo({ type: "extra", payload: extra });
+    state.extras=state.extras.filter(x=>x.id!==b.dataset.exdel);
+    render();
+  });
 }
 
 function renderCategories(t){
   const box=$("catsList"); box.innerHTML="";
   state.categories.forEach(c=>{
-    const spent=t.byCat[c.id]||0; const left=(c.budget||0)-spent;
+    const spent=t.byCat[c.id]||0; const left=(c.budget||0)-spent; const ratio = num(c.budget) > 0 ? spent / num(c.budget) : 0;
     const row=document.createElement("div"); row.className="row cat-row";
-    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="number" min="0" step="10" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status ${left>=0?"green":"red"}">${left>=0?"Residuo":"Sforato"} ${EUR.format(Math.abs(left))}</span><button class="btn-mini" data-catdel="${c.id}" title="Elimina categoria">🗑</button>`;
+    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="number" min="0" step="10" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status"></span><button class="btn-mini" data-catdel="${c.id}" title="Elimina categoria">Del</button>`;
     box.appendChild(row);
     row.querySelector(`[data-catpurpose="${c.id}"]`).value = c.purpose || "expense";
+    const status = row.querySelector('.cat-status');
+    const statusText = left < 0 ? 'Sforato' : (ratio >= 0.85 ? 'Attenzione' : 'Residuo');
+    status.className = `cat-status ${left < 0 ? "red" : (ratio >= 0.85 ? "warn" : "green")}`;
+    status.innerHTML = `${statusText} ${EUR.format(Math.abs(left))}<br><span class="muted">${c.cadence === "fixed" ? "Fissa" : "Variabile"}</span>`;
+    status.title = 'Clicca per cambiare Fissa/Variabile';
+    status.onclick = () => { c.cadence = c.cadence === 'fixed' ? 'variable' : 'fixed'; render(); };
   });
   box.querySelectorAll("[data-catname]").forEach(i=>{
     i.oninput=()=>{state.categories.find(c=>c.id===i.dataset.catname).name=i.value||"Categoria";saveDraft();};
@@ -562,13 +795,8 @@ function renderCategories(t){
   box.querySelectorAll("[data-catdel]").forEach(b=>b.onclick=()=>{
     if(state.categories.length<=1) return;
     const removedTx = state.transactions.filter(tn=>tn.categoryId===b.dataset.catdel);
-    removedTx.forEach((tx)=>{
-      const asset = state.assets.find(a=>a.id===tx.assetId) || state.assets[0];
-      if (asset) {
-        const amt = num(tx.amount);
-        asset.value = tx.type === "income" ? (num(asset.value) - amt) : (num(asset.value) + amt);
-      }
-    });
+    removedTx.forEach((tx)=> applyTransactionToAsset(tx,-1));
+    stashUndo({ type: 'categoria', payload: state.categories.find(c=>c.id===b.dataset.catdel) });
     state.transactions=state.transactions.filter(tn=>tn.categoryId!==b.dataset.catdel);
     state.categories=state.categories.filter(c=>c.id!==b.dataset.catdel);
     render();
@@ -580,19 +808,23 @@ function renderMoves(){
   [...state.transactions].sort((a,b)=>b.date.localeCompare(a.date)).forEach(m=>{
     const cat=state.categories.find(c=>c.id===m.categoryId)?.name||"Categoria";
     const assetName=state.assets.find(a=>a.id===m.assetId)?.name||"Conto principale";
-    const isIncome = m.type === "income";
     const row=document.createElement("div"); row.className="row move-row";
-    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><button class="btn-mini" data-mdel="${m.id}">🗑</button>`;
+    row.innerHTML=`<span class="muted">${m.date}</span><span>${m.desc} <span class="muted">(${assetName})</span></span><span class="chip">${cat}</span><span class="${m.type==='income'?'green':'red'}">${m.type==='income'?'+':'-'}${EUR.format(m.amount)}</span><span style="display:flex;gap:6px"><button class="btn-mini" data-mdup="${m.id}">Duplica</button><button class="btn-mini" data-mdel="${m.id}">Del</button></span>`;
     box.appendChild(row);
+  });
+  box.querySelectorAll("[data-mdup]").forEach(b=>b.onclick=()=>{
+    const tx=state.transactions.find(t=>t.id===b.dataset.mdup);
+    if (!tx) return;
+    const clone={...tx,id:uid(),date:today()};
+    applyTransactionToAsset(clone,1);
+    state.transactions.push(clone);
+    render();
   });
   box.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=()=>{
     const tx=state.transactions.find(t=>t.id===b.dataset.mdel);
     if (tx) {
-      const asset=state.assets.find(a=>a.id===tx.assetId) || state.assets[0];
-      if (asset) {
-        const amt = num(tx.amount);
-        asset.value = tx.type === "income" ? (num(asset.value) - amt) : (num(asset.value) + amt);
-      }
+      stashUndo({ type: 'movimento', payload: tx });
+      applyTransactionToAsset(tx,-1);
     }
     state.transactions=state.transactions.filter(t=>t.id!==b.dataset.mdel);
     render();
@@ -603,7 +835,7 @@ function renderWealth(t){
   const box=$("wealthList"); box.innerHTML="";
   state.assets.forEach(a=>{
     const row=document.createElement("div"); row.className="row wealth-row";
-    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini" data-adel="${a.id}">🗑</button>`;
+    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini" data-adel="${a.id}">Del</button>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-aname]").forEach(i=>{
@@ -614,8 +846,14 @@ function renderWealth(t){
     i.oninput=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);saveDraft();};
     i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);render();};
   });
-  box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return;state.assets=state.assets.filter(a=>a.id!==b.dataset.adel);render();});
+  box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return; const asset=state.assets.find(a=>a.id===b.dataset.adel); stashUndo({ type: 'conto', payload: asset }); state.assets=state.assets.filter(a=>a.id!==b.dataset.adel); render();});
   $("netWorth").textContent=EUR.format(t.netWorth); $("savedTotal").textContent=EUR.format(t.totalSave); $("investTotal").textContent=EUR.format(t.totalInv);
+  const emergencyTarget = num(state.income.emergencyTarget);
+  const emergencyPct = emergencyTarget ? clampPct((t.totalSave / emergencyTarget) * 100) : 0;
+  $("emergencyProgressValue").textContent = `${EUR.format(t.totalSave)} / ${EUR.format(emergencyTarget)}`;
+  $("emergencyProgress").style.width = `${emergencyPct}%`;
+  $("sourceBreakdown").textContent = `Stipendio ${EUR.format(t.salary)} / Extra ${EUR.format(t.extraTotal)} / Uscite ${EUR.format(t.totalSpent)}`;
+  renderGoals(t);
 }
 
 function renderMoveSelect(){
@@ -670,14 +908,19 @@ function renderCharts(t){
 }
 
 function render(){
+  ensureRecurringForCurrentMonth();
   const t=totals();
-  $("salary").value=state.income.salary; $("investPct").value=state.income.investPct;
+  $("salary").value=state.income.salary; $("investPct").value=state.income.investPct; $("emergencyTarget").value = state.income.emergencyTarget;
   $("extraProfitTotal").textContent=EUR.format(t.extraTotal);
   $("incomeTotal").textContent=EUR.format(t.netWorth);
   $("salaryTotal").textContent=EUR.format(t.salary);
   $("extraOnlyTotal").textContent=EUR.format(t.extraTotal);
   $("savingsTotal").textContent=EUR.format(t.totalSave);
-  renderExtras(); renderMoveSelect(); renderMoves(); renderCategories(t); renderWealth(t); renderCharts(t);
+  $("monthForecast").textContent = EUR.format(t.monthForecast);
+  $("investTargetAuto").textContent = EUR.format(t.investAutoTarget);
+  $("profitMonth").textContent = EUR.format(t.profitMonth);
+  $("profitYear").textContent = EUR.format(t.profitYear);
+  renderExtras(); renderMoveSelect(); renderMoves(); renderRecurring(); renderCategories(t); renderTopCategories(t); renderWealth(t); renderCharts(t);
   const budgetTotalSalary = state.categories.reduce((acc,c)=>{
     const useSalary = !!c.useSalary;
     return acc + (useSalary ? (c.budget||0) : 0);
@@ -691,7 +934,9 @@ $("salary").oninput=e=>{state.income.salary=num(e.target.value);saveDraft();};
 $("salary").onchange=e=>{state.income.salary=num(e.target.value);render();};
 $("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));saveDraft();};
 $("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));render();};
-$("addExtra").onclick=()=>{const d=$("newExtraDesc").value.trim();const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);if(!d)return;state.extras.push({id:uid(),desc:d,buy,sell});$("newExtraDesc").value="";$("newExtraBuy").value="";$("newExtraSell").value="";render();};
+$("emergencyTarget").oninput=e=>{state.income.emergencyTarget=num(e.target.value);saveDraft();};
+$("emergencyTarget").onchange=e=>{state.income.emergencyTarget=num(e.target.value);render();};
+$("addExtra").onclick=()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;state.extras.push({id:uid(),desc:d,status,buy,sell,fees,shipping,date:today()});$("newExtraDesc").value="";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();};
 $("moveDate").value=today();
 $("addMove").onclick=()=>{
   const date=$("moveDate").value||today();
@@ -708,8 +953,10 @@ $("addMove").onclick=()=>{
   $("moveAmount").value="";
   render();
 };
-$("addCat").onclick=()=>{const name=$("newCatName").value.trim();const budget=num($("newCatBudget").value);const bucket=$("newCatBucket").value;if(!name)return;const n=name.toLowerCase();const purpose=n.includes("invest")?"invest":(n.includes("rispar")?"saving":"expense");state.categories.push({id:uid(),name,budget,bucket,purpose,useSalary:bucket!=="extra",useExtra:bucket!=="salary"});$("newCatName").value="";$("newCatBudget").value="";render();};
+$("addCat").onclick=()=>{const name=$("newCatName").value.trim();const budget=num($("newCatBudget").value);const bucket=$("newCatBucket").value;if(!name)return;const n=name.toLowerCase();const purpose=n.includes("invest")?"invest":(n.includes("rispar")?"saving":"expense");state.categories.push({id:uid(),name,budget,bucket,purpose,useSalary:bucket!=="extra",useExtra:bucket!=="salary",cadence:"variable"});$("newCatName").value="";$("newCatBudget").value="";render();};
 $("addAsset").onclick=()=>{const name=$("newAssetName").value.trim();const value=num($("newAssetValue").value);if(!name)return;state.assets.push({id:uid(),name,value});$("newAssetName").value="";$("newAssetValue").value="";render();};
+$("addGoal").onclick=()=>{const name=$("newGoalName").value.trim(); const target=num($("newGoalTarget").value); if(!name||!target)return; state.goals.push({id:uid(),name,target}); $("newGoalName").value=""; $("newGoalTarget").value=""; render();};
+$("addRecurring").onclick=()=>{const desc=$("moveDesc").value.trim()||"Movimento ricorrente"; const type=$("moveType").value; const categoryId=$("moveCat").value; const assetId=$("moveAsset").value; const amount=num($("moveAmount").value); const day=Math.max(1,Math.min(31,num($("recurringDay").value)||new Date().getDate())); if(!categoryId||!amount)return; state.recurring.push({id:uid(),desc,type,categoryId,assetId,amount,day}); $("recurringDay").value=""; render();};
 
 async function loadCloudDataIfAvailable() {
   if (!authToken) return;
@@ -808,6 +1055,37 @@ $("resetAllBtn").onclick = async () => {
     $("authStatus").textContent = "Reset locale eseguito, errore sync cloud";
     if ($("userStatus")) $("userStatus").textContent = "Reset locale eseguito, errore sync cloud";
   }
+};
+$("exportJsonBtn").onclick = () => { downloadFile(`budgetly-${today()}.json`, JSON.stringify(state, null, 2), 'application/json'); };
+$("exportCsvBtn").onclick = () => {
+  const rows = [["date","type","description","category","asset","amount"]];
+  state.transactions.forEach((tx) => rows.push([tx.date, tx.type, tx.desc, state.categories.find(c=>c.id===tx.categoryId)?.name || '', state.assets.find(a=>a.id===tx.assetId)?.name || '', tx.amount]));
+  downloadFile(`budgetly-movimenti-${today()}.csv`, rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'), 'text/csv;charset=utf-8');
+};
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const content = await file.text();
+  if (file.name.toLowerCase().endswith('.json')) {
+    const parsed = JSON.parse(content);
+    replaceState(parsed);
+    render();
+  }
+  e.target.value = '';
+};
+$("undoDeleteBtn").onclick = () => {
+  if (!lastDeleted) return;
+  const { type, payload } = lastDeleted;
+  if (type === 'movimento') { state.transactions.push(payload); applyTransactionToAsset(payload,1); }
+  if (type === 'extra') state.extras.push(payload);
+  if (type === 'obiettivo') state.goals.push(payload);
+  if (type === 'ricorrente') state.recurring.push(payload);
+  if (type === 'conto') state.assets.push(payload);
+  if (type === 'categoria') state.categories.push(payload);
+  lastDeleted = null;
+  $("undoDeleteBtn").textContent = 'Annulla elimina';
+  render();
 };
 $("logoutBtn").onclick = () => {
   authToken = "";

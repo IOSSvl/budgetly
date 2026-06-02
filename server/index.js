@@ -13,12 +13,14 @@ const PORT = Number(process.env.PORT || 3001);
 
 function emptyPayload() {
   return {
-    income: { salary: 0, investPct: 0 },
+    income: { salary: 0, investPct: 0, emergencyTarget: 0 },
     extras: [],
     categories: [
-      { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false }
+      { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }
     ],
     transactions: [],
+    recurring: [],
+    goals: [],
     assets: [
       { id: "a1", name: "Conto principale", value: 0 }
     ]
