@@ -10,8 +10,8 @@
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@500;700;800&display=swap');
     :root { --bg:#0f0e0d; --surface:#181715; --border:#2d2a26; --accent:#e5be4b; --green:#55c26f; --red:#fa5e56; --blue:#6a90ff; --text:#f4efe5; --muted:#8b836f; }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:"DM Mono",monospace; color:var(--text); background:radial-gradient(1000px 500px at 20% 0%,#171511 0,transparent 70%),radial-gradient(1000px 500px at 100% 100%,#141923 0,transparent 70%),var(--bg); }
-    .app { max-width:1920px; margin:0 auto; min-height:100vh; padding:18px; display:grid; gap:12px; grid-template-columns:1fr 1.25fr 1.2fr; grid-template-areas:"header charts charts" "income moves table" "wealth wealth wealth"; }
+    body { margin:0; font-family:"DM Mono",monospace; color:var(--text); background:radial-gradient(1000px 500px at 20% 0%,#171511 0,transparent 70%),radial-gradient(1000px 500px at 100% 100%,#141923 0,transparent 70%),var(--bg); overflow-x:hidden; }
+    .app { width:min(100%, 1920px); margin:0 auto; min-height:100vh; padding:18px; display:grid; gap:12px; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.2fr); grid-template-areas:"header charts charts" "income moves table" "wealth wealth wealth"; }
     .app.hidden { display:none; }
     .card { border:1px solid #8a71331f; border-radius:14px; background:linear-gradient(160deg,#191714,#11100f); padding:12px; }
     .auth-screen{min-height:100vh;display:grid;place-items:center;padding:20px}
@@ -19,7 +19,8 @@
     h1,h2,p { margin:0; }
     h1 { font:800 40px/1 "Syne",sans-serif; }
     h2 { font:700 24px/1 "Syne",sans-serif; color:var(--accent); }
-    .header{grid-area:header}.charts{grid-area:charts;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.income{grid-area:income}.moves{grid-area:moves}.table{grid-area:table}.wealth{grid-area:wealth}
+    .header,.charts,.income,.moves,.table,.wealth{min-width:0}
+    .header{grid-area:header}.charts{grid-area:charts;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.income{grid-area:income}.moves{grid-area:moves}.table{grid-area:table}.wealth{grid-area:wealth}
     .label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font:700 30px/1.1 "Syne",sans-serif}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}
     .muted{color:var(--muted);font-size:12px}
     input,select,button{width:100%;border-radius:9px;border:1px solid var(--border);background:#12110f;color:var(--text);font-family:inherit;padding:9px}
@@ -43,6 +44,11 @@
     .pie-wrap{display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center}
     .legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}
     .dot{width:12px;height:12px;border-radius:2px}
+    .move-entry{grid-template-columns:110px minmax(0,1fr) 120px 140px 150px 110px auto}
+    .cat-create{grid-template-columns:minmax(0,1fr) 110px 100px auto}
+    .asset-create{grid-template-columns:minmax(0,1fr) 110px auto}
+    .status-row{grid-template-columns:1fr auto auto}
+    .move-entry > *, .cat-create > *, .asset-create > *{min-width:0}
     @media (max-width:1280px){
       .cat-row{
         grid-template-columns:1fr 88px 88px 1fr;
@@ -57,8 +63,24 @@
       .cat-row [data-catbudget]{grid-area:budget}
       .cat-row .cat-status{grid-area:status}
       .cat-row [data-catdel]{grid-area:del;justify-self:end}
+      .move-entry{
+        grid-template-columns:1fr 1fr 1fr;
+        grid-template-areas:
+          "date type amount"
+          "desc desc desc"
+          "cat asset save";
+      }
+      .move-entry #moveDate{grid-area:date}
+      .move-entry #moveType{grid-area:type}
+      .move-entry #moveAmount{grid-area:amount}
+      .move-entry #moveDesc{grid-area:desc}
+      .move-entry #moveCat{grid-area:cat}
+      .move-entry #moveAsset{grid-area:asset}
+      .move-entry #addMove{grid-area:save}
+      .cat-create{grid-template-columns:1fr 110px 100px auto}
+      .asset-create{grid-template-columns:1fr 110px auto}
     }
-    @media (max-width:1100px){.app{max-width:1080px;grid-template-columns:1fr;grid-template-areas:"header" "charts" "income" "moves" "table" "wealth"}.charts{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr 1fr}.move-row{grid-template-columns:1fr 1fr}.extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}}
+    @media (max-width:1100px){.app{width:min(100%,1080px);grid-template-columns:1fr;grid-template-areas:"header" "charts" "income" "moves" "table" "wealth"}.charts{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr 1fr}.move-row{grid-template-columns:1fr 1fr}.extra-row,.wealth-row{grid-template-columns:1fr 1fr auto}.status-row{grid-template-columns:1fr auto auto}}
     @media (max-width:720px){
       .cat-row{
         grid-template-columns:1fr 1fr;
@@ -69,6 +91,10 @@
           "status del";
       }
       .cat-row [data-catdel]{justify-self:end}
+      .status-row{grid-template-columns:1fr;justify-items:start}
+      .move-entry,.cat-create,.asset-create{grid-template-columns:1fr}
+      .pie-wrap{grid-template-columns:1fr}
+      canvas{justify-self:center}
     }
   </style>
 </head>
@@ -95,7 +121,7 @@
   <section class="header card">
     <h1>Budgetly</h1>
     <p class="muted">Stipendio per sopravvivenza, extra per svago + risparmio, con quota investimenti lungo termine.</p>
-    <div class="row" style="grid-template-columns:1fr auto auto;margin-top:8px">
+    <div class="row status-row" style="margin-top:8px">
       <span id="userStatus" class="muted">Connesso</span>
       <button id="saveNowBtn" class="btn-mini">Salva ora</button>
       <button id="logoutBtn" class="btn-mini">Logout</button>
@@ -155,7 +181,7 @@
 
   <section class="moves card">
     <h2>Movimenti</h2>
-    <div class="row" style="grid-template-columns:110px 1fr 120px 140px 150px 110px auto">
+    <div class="row move-entry">
       <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="number" min="0" step="1" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
     </div>
     <div class="list" id="movesList"></div>
@@ -165,7 +191,7 @@
     <h2>Budget categorie</h2>
     <p class="muted">Scegli tu quali categorie pesano sul grafico stipendio e quali sul grafico extra.</p>
     <div id="catsList" class="list"></div>
-    <div class="row" style="grid-template-columns:1fr 110px 100px auto">
+    <div class="row cat-create">
       <input id="newCatName" type="text" placeholder="Nuova categoria">
       <input id="newCatBudget" type="number" min="0" step="10" placeholder="Budget">
       <select id="newCatBucket"><option value="salary">Stipendio</option><option value="extra">Extra</option><option value="mixed">Misto</option></select>
@@ -177,7 +203,7 @@
   <section class="wealth card">
     <h2>Patrimonio</h2>
     <div id="wealthList" class="list"></div>
-    <div class="row wealth-row"><input id="newAssetName" type="text" placeholder="Nuovo conto / asset"><input id="newAssetValue" type="number" min="0" step="10" placeholder="Valore"><button id="addAsset" class="btn-primary btn-mini">+ Aggiungi</button></div>
+    <div class="row asset-create"><input id="newAssetName" type="text" placeholder="Nuovo conto / asset"><input id="newAssetValue" type="number" min="0" step="10" placeholder="Valore"><button id="addAsset" class="btn-primary btn-mini">+ Aggiungi</button></div>
     <div class="kpi">
       <div class="card"><p class="label">Patrimonio totale</p><p class="value green" id="netWorth">€0</p></div>
       <div class="card"><p class="label">Risparmio totale</p><p class="value blue" id="savedTotal">€0</p></div>
