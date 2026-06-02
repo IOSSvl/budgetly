@@ -84,30 +84,32 @@ app.get("/api/me", requireAuth, (req, res) => {
 });
 
 app.get("/api/data", requireAuth, async (req, res) => {
-  const result = await query("SELECT payload FROM user_budget_data WHERE user_id = $1", [req.user.sub]);
+  const result = await query("SELECT payload, updated_at FROM user_budget_data WHERE user_id = $1", [req.user.sub]);
   if (result.rows[0]?.payload) {
-    return res.json({ payload: result.rows[0].payload });
+    return res.json({ payload: result.rows[0].payload, updatedAt: result.rows[0].updated_at });
   }
   const payload = emptyPayload();
-  await query(
+  const writeResult = await query(
     `INSERT INTO user_budget_data (user_id, payload, updated_at)
      VALUES ($1, $2::jsonb, NOW())
-     ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+     ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+     RETURNING updated_at`,
     [req.user.sub, JSON.stringify(payload)]
   );
-  return res.json({ payload });
+  return res.json({ payload, updatedAt: writeResult.rows?.[0]?.updated_at || new Date().toISOString() });
 });
 
 app.put("/api/data", requireAuth, async (req, res) => {
   const { payload } = req.body || {};
   if (!payload || typeof payload !== "object") return res.status(400).json({ error: "Payload non valido" });
-  await query(
+  const result = await query(
     `INSERT INTO user_budget_data (user_id, payload, updated_at)
      VALUES ($1, $2::jsonb, NOW())
-     ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+     ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+     RETURNING updated_at`,
     [req.user.sub, JSON.stringify(payload)]
   );
-  res.json({ ok: true });
+  res.json({ ok: true, updatedAt: result.rows?.[0]?.updated_at || new Date().toISOString() });
 });
 
 app.listen(PORT, () => {

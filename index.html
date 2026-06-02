@@ -229,9 +229,22 @@ const API_BASE = `${location.origin}/api`;
 let authMode = "login";
 let authToken = localStorage.getItem(TOKEN_KEY) || "";
 let syncTimer = null;
+let lastSyncedAt = localStorage.getItem("budgetly_last_synced_at") || "";
+let cloudSyncInFlight = false;
 
 function localSave() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function markSynced(updatedAt) {
+  if (!updatedAt) return;
+  lastSyncedAt = String(updatedAt);
+  localStorage.setItem("budgetly_last_synced_at", lastSyncedAt);
+}
+
+function replaceState(nextState) {
+  Object.keys(state).forEach((k) => delete state[k]);
+  Object.assign(state, nextState);
 }
 
 async function api(path, options = {}) {
@@ -247,8 +260,10 @@ function scheduleCloudSave() {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
     try {
-      await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+      const result = await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+      markSynced(result.updatedAt);
       $("authStatus").textContent = "Sincronizzato sul cloud";
+      if ($("userStatus")) $("userStatus").textContent = "Connesso e sincronizzato";
     } catch {
       $("authStatus").textContent = "Errore sync cloud (dati salvati in locale)";
     }
@@ -514,16 +529,35 @@ async function loadCloudDataIfAvailable() {
     $("userStatus").textContent = `Connesso come ${me.user.name}`;
     const cloud = await api("/data");
     if (cloud.payload) {
-      Object.keys(state).forEach((k) => delete state[k]);
-      Object.assign(state, cloud.payload);
+      replaceState(cloud.payload);
+      markSynced(cloud.updatedAt);
     } else {
-      Object.keys(state).forEach((k) => delete state[k]);
-      Object.assign(state, createEmptyState());
+      replaceState(createEmptyState());
     }
   } catch {
     authToken = "";
     localStorage.removeItem(TOKEN_KEY);
     $("authStatus").textContent = "Sessione scaduta, rifai login";
+  }
+}
+
+async function refreshFromCloud(force = false) {
+  if (!authToken || cloudSyncInFlight) return;
+  cloudSyncInFlight = true;
+  try {
+    const cloud = await api("/data");
+    if (!cloud.payload) return;
+    const remoteTime = cloud.updatedAt ? new Date(cloud.updatedAt).getTime() : 0;
+    const localTime = lastSyncedAt ? new Date(lastSyncedAt).getTime() : 0;
+    if (force || remoteTime > localTime) {
+      replaceState(cloud.payload);
+      markSynced(cloud.updatedAt);
+      render();
+    }
+  } catch {
+    // Keep local state if cloud refresh fails.
+  } finally {
+    cloudSyncInFlight = false;
   }
 }
 
@@ -558,17 +592,16 @@ $("authAction").onclick = async () => {
     $("authStatus").textContent = `Connesso come ${result.user.name}`;
     $("userStatus").textContent = `Connesso come ${result.user.name}`;
     if (authMode === "register") {
-      Object.keys(state).forEach((k) => delete state[k]);
-      Object.assign(state, createEmptyState());
-      await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+      replaceState(createEmptyState());
+      const saved = await api("/data", { method: "PUT", body: JSON.stringify({ payload: state }) });
+      markSynced(saved.updatedAt);
     } else {
       const cloud = await api("/data");
       if (cloud.payload) {
-        Object.keys(state).forEach((k) => delete state[k]);
-        Object.assign(state, cloud.payload);
+        replaceState(cloud.payload);
+        markSynced(cloud.updatedAt);
       } else {
-        Object.keys(state).forEach((k) => delete state[k]);
-        Object.assign(state, createEmptyState());
+        replaceState(createEmptyState());
       }
     }
     $("authScreen").style.display = "none";
@@ -580,6 +613,10 @@ $("authAction").onclick = async () => {
 };
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
+window.addEventListener("focus", () => { refreshFromCloud(false); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshFromCloud(false);
+});
 (async () => {
   await loadCloudDataIfAvailable();
   if (authToken) {
