@@ -489,6 +489,37 @@ function hasPendingLocalChanges() {
 function replaceState(nextState) {
   Object.keys(state).forEach((k) => delete state[k]);
   Object.assign(state, nextState);
+  normalizeState();
+}
+
+function normalizeState() {
+  if (!Array.isArray(state.extras)) state.extras = [];
+  if (!Array.isArray(state.transactions)) state.transactions = [];
+  if (!Array.isArray(state.categories) || !state.categories.length) {
+    state.categories = [{ id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }];
+  }
+  if (!Array.isArray(state.assets) || !state.assets.length) state.assets = [{ id: uid(), name: "Conto principale", value: 0 }];
+  if (!Array.isArray(state.goals)) state.goals = [];
+  if (!Array.isArray(state.recurring)) state.recurring = [];
+  if (!state.income || typeof state.income !== "object") state.income = { salary: 0, investPct: 0, emergencyTarget: 0 };
+  if (typeof state.income.salary !== "number") state.income.salary = num(state.income.salary);
+  if (typeof state.income.investPct !== "number") state.income.investPct = num(state.income.investPct);
+  if (typeof state.income.emergencyTarget !== "number") state.income.emergencyTarget = num(state.income.emergencyTarget);
+  state.categories.forEach((c)=>{
+    if (typeof c.useSalary !== "boolean") c.useSalary = c.bucket !== "extra";
+    if (typeof c.useExtra !== "boolean") c.useExtra = c.bucket !== "salary";
+    if (!c.cadence) c.cadence = "variable";
+    if (!c.purpose) {
+      const n = (c.name || "").toLowerCase();
+      c.purpose = n.includes("invest") ? "invest" : (n.includes("rispar") ? "saving" : "expense");
+    }
+  });
+  state.extras.forEach((e)=>{
+    if (!e.status) e.status = "sold";
+    if (typeof e.fees !== "number") e.fees = num(e.fees);
+    if (typeof e.shipping !== "number") e.shipping = num(e.shipping);
+    if (!e.date) e.date = today();
+  });
 }
 
 async function api(path, options = {}) {
@@ -551,31 +582,7 @@ async function forceCloudSave() {
     $("authStatus").textContent = "Errore sync cloud (dati salvati in locale)";
   }
 }
-if (!Array.isArray(state.extras)) state.extras = [];
-if (!Array.isArray(state.transactions)) state.transactions = [];
-if (!Array.isArray(state.categories) || !state.categories.length) {
-  state.categories = [{ id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }];
-}
-if (!Array.isArray(state.assets) || !state.assets.length) state.assets = [{ id: uid(), name: "Conto principale", value: 0 }];
-if (!Array.isArray(state.goals)) state.goals = [];
-if (!Array.isArray(state.recurring)) state.recurring = [];
-if (!state.income || typeof state.income !== "object") state.income = { salary: 0, investPct: 0, emergencyTarget: 0 };
-if (typeof state.income.emergencyTarget !== "number") state.income.emergencyTarget = num(state.income.emergencyTarget);
-state.categories.forEach((c)=>{
-  if (typeof c.useSalary !== "boolean") c.useSalary = c.bucket !== "extra";
-  if (typeof c.useExtra !== "boolean") c.useExtra = c.bucket !== "salary";
-  if (!c.cadence) c.cadence = "variable";
-  if (!c.purpose) {
-    const n = (c.name || "").toLowerCase();
-    c.purpose = n.includes("invest") ? "invest" : (n.includes("rispar") ? "saving" : "expense");
-  }
-});
-state.extras.forEach((e)=>{
-  if (!e.status) e.status = "sold";
-  if (typeof e.fees !== "number") e.fees = num(e.fees);
-  if (typeof e.shipping !== "number") e.shipping = num(e.shipping);
-  if (!e.date) e.date = today();
-});
+normalizeState();
 
 function totals(){
   const salary=num(state.income.salary);
