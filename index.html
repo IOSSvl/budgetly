@@ -755,6 +755,7 @@ const assetBucket=(asset)=>{
   if (name.includes("rispar")) return "saving";
   return "cash";
 };
+const isRealizedExtra=(e)=>e?.status==="sold" || (num(e?.sell)>0 && e?.paymentStatus==="paid");
 const num=(v)=>{
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   let s = String(v ?? "").trim();
@@ -1019,7 +1020,7 @@ function totals(){
   const salary=num(state.income.salary);
   const currentMonth = monthKey();
   const currentYear = yearKey();
-  const soldExtras = state.extras.filter(e => e.status === "sold");
+  const soldExtras = state.extras.filter(e => isRealizedExtra(e));
   const extraTotal=sum(soldExtras,e=>extraNet(e));
   const essentialNames = new Set(["affitto","bollette","spesa","trasporti"]);
   let essentialBudgetSalary=0,essentialBudgetExtra=0;
@@ -1282,7 +1283,7 @@ function renderExtras(){
   state.extras.filter(e => !e.archived && matchesSearch(e.desc, e.platform, e.status, e.paymentStatus, e.deliveryStatus)).forEach(e=>{
     const profit=extraNet(e);
     const row=document.createElement("div"); row.className="row extra-row";
-    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="text" value="${e.platform||''}" data-explatform="${e.id}" placeholder="Piattaforma"><select data-expay="${e.id}"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select><select data-exdelivery="${e.id}"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select><input type="text" inputmode="decimal" value="${e.buy||0}" data-exbuy="${e.id}"><input type="text" inputmode="decimal" value="${e.sell||0}" data-exsell="${e.id}"><input type="text" inputmode="decimal" value="${e.fees||0}" data-exfees="${e.id}"><input type="text" inputmode="decimal" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini icon-btn" data-exarchive="${e.id}" title="Archivia">âœ“</button><button class="btn-mini icon-btn" data-exdel="${e.id}" title="Elimina">&#128465;</button>`;
+    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="text" value="${e.platform||''}" data-explatform="${e.id}" placeholder="Piattaforma"><select data-expay="${e.id}"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select><select data-exdelivery="${e.id}"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select><input type="text" inputmode="decimal" value="${e.buy||0}" data-exbuy="${e.id}"><input type="text" inputmode="decimal" value="${e.sell||0}" data-exsell="${e.id}"><input type="text" inputmode="decimal" value="${e.fees||0}" data-exfees="${e.id}"><input type="text" inputmode="decimal" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini" data-exarchive="${e.id}" title="Archivia">Archivia</button><button class="btn-mini icon-btn" data-exdel="${e.id}" title="Elimina">&#128465;</button>`;
     box.appendChild(row);
     row.querySelector(`[data-exstatus="${e.id}"]`).value = e.status || "sold";
     row.querySelector(`[data-expay="${e.id}"]`).value = e.paymentStatus || "none";
