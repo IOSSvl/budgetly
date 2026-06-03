@@ -117,9 +117,9 @@
     .subtle-title{margin-top:14px;color:var(--accent-strong);font:700 16px/1 "Syne",sans-serif}
     .split-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
     .goal-row,.recurring-row{grid-template-columns:minmax(0,1fr) 110px auto}
-    .move-flags{grid-template-columns:auto 1fr}
-    .move-flags label{display:flex;align-items:center;gap:8px;white-space:nowrap}
-    .move-flags input[type="checkbox"]{width:16px;height:16px}
+    .move-flags{grid-template-columns:220px minmax(0,1fr);align-items:start}
+    .move-flags .flag-copy{display:grid;gap:4px}
+    .move-flags .flag-title{font:700 13px/1 "Syne",sans-serif;color:var(--accent-strong)}
     .actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
     .toolbar-grid{display:grid;grid-template-columns:minmax(240px,1fr) 130px 130px;gap:8px;margin-top:10px;align-items:center}
     .pie-wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:center}
@@ -231,6 +231,7 @@
       .toolbar-grid #globalSearch{grid-column:1 / -1}
       .forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
       .pie-wrap{grid-template-columns:1fr}
+      .move-flags{grid-template-columns:1fr}
     }
     @media (max-width:1450px){
       .move-entry{
@@ -352,7 +353,7 @@
     <p class="muted">Guida rapida: imposta conti e categorie, registra movimenti, controlla previsioni e verifica che il cloud sia sincronizzato.</p>
     <div class="section-grid">
       <div class="card"><p class="label">Stipendio e categorie</p><p class="muted">Inserisci stipendio netto, categorie e budget per avere previsioni coerenti.</p></div>
-      <div class="card"><p class="label">Movimenti</p><p class="muted">Usa mensile fissa per affitto o bollette e ricorrente per movimenti automatici.</p></div>
+      <div class="card"><p class="label">Movimenti</p><p class="muted">Usa spesa fissa mensile o settimanale per le uscite ricorrenti e "Ricorrente" per i movimenti automatici.</p></div>
       <div class="card"><p class="label">Previsioni</p><p class="muted">Confronta previsione dinamica e previsione da budget.</p></div>
       <div class="card"><p class="label">Salvataggio</p><p class="muted">Quando lo stato Ã¨ verde, i dati sono sincronizzati sul cloud.</p></div>
     </div>
@@ -542,8 +543,15 @@
       <input id="moveMonthFilter" type="month">
     </div>
     <div class="row move-flags" style="margin-top:8px">
-      <label><input id="moveFixedMonthly" type="checkbox"><span>Spesa mensile fissa (es. affitto)</span></label>
-      <span class="muted">Se attiva, questa uscita conta una volta nel mese e non viene proiettata come media giornaliera.</span>
+      <select id="moveFixedCadence">
+        <option value="none">Spesa normale</option>
+        <option value="monthly">Spesa mensile fissa</option>
+        <option value="weekly">Spesa settimanale fissa</option>
+      </select>
+      <div class="flag-copy">
+        <span class="flag-title">Periodicita previsione</span>
+        <span class="muted">Usa "mensile fissa" per affitto o bollette e "settimanale fissa" per spese che si ripetono ogni settimana.</span>
+      </div>
     </div>
     <div class="row" style="grid-template-columns:1fr 1fr 120px auto">
       <select id="transferFrom"></select>
@@ -792,6 +800,7 @@ function normalizeState() {
     if (!e.date) e.date = today();
   });
   state.transactions.forEach((tx)=>{
+    if (!tx.fixedCadence) tx.fixedCadence = tx.fixedMonthly ? "monthly" : "none";
     if (typeof tx.fixedMonthly !== "boolean") tx.fixedMonthly = false;
   });
   state.extras.forEach((e)=>{
@@ -928,12 +937,20 @@ function totals(){
   const spentExtra = essentialBudgetExtra + nonVitalSpentExtra;
   const saveSalary = Math.max(0, salaryAfterInvest - nonVitalSpentSalary);
   const saveExtra = Math.max(0, extraAfterInvest - nonVitalSpentExtra);
-  const fixedMonthSpent = sum(expenseTxCurrentMonth.filter(t => t.fixedMonthly), t => num(t.amount));
-  const variableMonthSpent = sum(expenseTxCurrentMonth.filter(t => !t.fixedMonthly), t => num(t.amount));
+  const monthlyFixedSpent = sum(expenseTxCurrentMonth.filter(t => (t.fixedCadence || (t.fixedMonthly ? "monthly" : "none")) === "monthly"), t => num(t.amount));
+  const weeklyFixedSpent = sum(expenseTxCurrentMonth.filter(t => (t.fixedCadence || (t.fixedMonthly ? "monthly" : "none")) === "weekly"), t => num(t.amount));
+  const variableMonthSpent = sum(expenseTxCurrentMonth.filter(t => {
+    const cadence = t.fixedCadence || (t.fixedMonthly ? "monthly" : "none");
+    return cadence === "none";
+  }), t => num(t.amount));
   const todayDate = new Date();
   const dayOfMonth = Math.max(1, todayDate.getDate());
-  const projectedVariableMonthSpent = (variableMonthSpent / dayOfMonth) * daysInMonth();
-  const projectedMonthSpent = fixedMonthSpent + projectedVariableMonthSpent;
+  const totalMonthDays = daysInMonth();
+  const elapsedWeeks = Math.max(1, Math.ceil(dayOfMonth / 7));
+  const totalWeeks = Math.max(1, Math.ceil(totalMonthDays / 7));
+  const projectedVariableMonthSpent = (variableMonthSpent / dayOfMonth) * totalMonthDays;
+  const projectedWeeklyFixedSpent = (weeklyFixedSpent / elapsedWeeks) * totalWeeks;
+  const projectedMonthSpent = monthlyFixedSpent + projectedWeeklyFixedSpent + projectedVariableMonthSpent;
   const monthForecast = (salary + extraTotal) - projectedMonthSpent;
   const budgetForecast = (salary + extraTotal) - (spentSalary + spentExtra);
   const forecastVsActual = budgetForecast - monthForecast;
@@ -1284,7 +1301,8 @@ function renderMoves(){
       } else {
         const cat=state.categories.find(c=>c.id===m.categoryId)?.name||"Categoria";
         const assetName=state.assets.find(a=>a.id===m.assetId)?.name||"Conto principale";
-        const fixedLabel = m.fixedMonthly ? ' - mensile fissa' : '';
+        const cadence = m.fixedCadence || (m.fixedMonthly ? "monthly" : "none");
+        const fixedLabel = cadence === "monthly" ? ' - mensile fissa' : cadence === "weekly" ? ' - settimanale fissa' : '';
         const signClass = m.type === 'income' ? 'green' : 'red';
         const sign = m.type === 'income' ? '+' : '-';
         row.innerHTML='<span class="muted">' + m.date + '</span><span>' + m.desc + ' <span class="muted">(' + assetName + ')' + fixedLabel + '</span></span><span class="chip">' + cat + '</span><span class="' + signClass + '">' + sign + EUR.format(m.amount) + '</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-mini" data-mdup="' + m.id + '">Duplica</button><button class="btn-mini icon-btn" data-mdel="' + m.id + '" title="Elimina">&#128465;</button></span>';
@@ -1486,7 +1504,7 @@ function render(){
     : t.budgetAlertDays <= 7
       ? "A questo ritmo il budget variabile si esaurisce presto."
       : "Il budget variabile sembra reggere con il ritmo attuale.";
-  $("forecastExplain").textContent = `Media: stipendio ${EUR.format(t.salary)} + extra ${EUR.format(t.extraTotal)} - proiezione ${EUR.format(t.totalIncome - t.monthForecast)}. Budget: entrate ${EUR.format(t.totalIncome)} - spese allocate ${EUR.format(t.totalSpent)}.`;
+  $("forecastExplain").textContent = `Media: stipendio ${EUR.format(t.salary)} + extra ${EUR.format(t.extraTotal)} - proiezione spese (variabili + fisse mensili/settimanali) ${EUR.format(t.totalIncome - t.monthForecast)}. Budget: entrate ${EUR.format(t.totalIncome)} - spese allocate ${EUR.format(t.totalSpent)}.`;
   $("platformProfitBreakdown").textContent = Object.keys(t.profitsByPlatform).length
     ? `Profitto netto per piattaforma: ${Object.entries(t.profitsByPlatform).map(([name, value]) => `${name} ${EUR.format(value)}`).join(" Â· ")}`
     : "Nessun profitto per piattaforma registrato.";
@@ -1523,13 +1541,14 @@ $("addMove").onclick=async ()=>{
   const amount=num($("moveAmount").value);
   if(!categoryId||!amount)return;
   const asset=state.assets.find(a=>a.id===assetId) || state.assets[0];
-  const fixedMonthly = type === "expense" ? $("moveFixedMonthly").checked : false;
+  const fixedCadence = type === "expense" ? ($("moveFixedCadence").value || "none") : "none";
+  const fixedMonthly = fixedCadence === "monthly";
   if (asset) asset.value = type === "income" ? (num(asset.value) + amount) : (num(asset.value) - amount);
-  state.transactions.push({id:uid(),date,desc,type,categoryId,assetId:asset?.id,amount,fixedMonthly});
+  state.transactions.push({id:uid(),date,desc,type,categoryId,assetId:asset?.id,amount,fixedMonthly,fixedCadence});
   logAction(`Aggiunto movimento ${desc}`);
   $("moveDesc").value="";
   $("moveAmount").value="";
-  $("moveFixedMonthly").checked=false;
+  $("moveFixedCadence").value="none";
   render();
   await forceCloudSave();
 };
