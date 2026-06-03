@@ -459,6 +459,10 @@
     </article>
     <article class="card chart">
       <div class="help-inline"><h2>Solo stipendio</h2><button class="help-btn" data-help="solo-stipendio">?</button></div>
+      <div class="pie-wrap">
+        <canvas id="salaryPie" width="180" height="180"></canvas>
+        <div id="salaryLegend" class="list" style="margin-top:0"></div>
+      </div>
       <div class="bar"><span class="muted">Stipendio netto</span><div class="stack"><div class="seg" style="background:#55c26f;width:100%"></div></div><span id="salNetVal" class="muted">â‚¬0</span></div>
       <div class="bar"><span class="muted">Soldi per spese</span><div class="stack"><div class="seg" id="salSpentBar" style="background:#e5be4b"></div></div><span id="salSpentVal" class="muted">â‚¬0</span></div>
       <div class="bar"><span class="muted">Risparmio</span><div class="stack"><div class="seg" id="salSaveBar" style="background:#55c26f"></div></div><span id="salSaveVal" class="muted">â‚¬0</span></div>
@@ -466,6 +470,10 @@
     </article>
     <article class="card chart">
       <div class="help-inline"><h2>Solo extra</h2><button class="help-btn" data-help="solo-extra">?</button></div>
+      <div class="pie-wrap">
+        <canvas id="extraPie" width="180" height="180"></canvas>
+        <div id="extraLegend" class="list" style="margin-top:0"></div>
+      </div>
       <div class="bar"><span class="muted">Extra totali</span><div class="stack"><div class="seg" style="background:#6a90ff;width:100%"></div></div><span id="extNetVal" class="muted">â‚¬0</span></div>
       <div class="bar"><span class="muted">Soldi per spese</span><div class="stack"><div class="seg" id="extSpentBar" style="background:#fa5e56"></div></div><span id="extSpentVal" class="muted">â‚¬0</span></div>
       <div class="bar"><span class="muted">Risparmio</span><div class="stack"><div class="seg" id="extSaveBar" style="background:#55c26f"></div></div><span id="extSaveVal" class="muted">â‚¬0</span></div>
@@ -1780,28 +1788,46 @@ function applyMoveIncomePreset() {
   }
 }
 
-function renderPie(t){
-  const canvas=$("totalPie");
+function renderBreakdownPie(canvasId, legendId, parts){
+  const canvas=$(canvasId);
+  const legend=$(legendId);
+  if(!canvas || !legend) return;
   const ctx=canvas.getContext("2d");
+  const activeParts=parts.filter(p=>p.value>0);
+  const sourceParts = activeParts.length ? activeParts : [{label:"Nessun dato",value:1,color:"#7e6f61"}];
+  const total=sourceParts.reduce((s,p)=>s+p.value,0)||1;
+  const hoverIndex=Number(canvas.dataset.hoverIndex||-1);
+  ctx.clearRect(0,0,180,180);
+  let start=-Math.PI/2;
+  sourceParts.forEach((p,idx)=>{
+    const angle=(p.value/total)*Math.PI*2; const end=start+angle; const isHover=idx===hoverIndex;
+    const off=isHover?8:0; const mid=(start+end)/2; const cx=90+Math.cos(mid)*off; const cy=90+Math.sin(mid)*off;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,72,start,end); ctx.closePath(); ctx.fillStyle=p.color; ctx.fill(); start=end;
+  });
+  legend.innerHTML="";
+  sourceParts.forEach((p,idx)=>{const row=document.createElement("div"); row.className="legend-row"; row.innerHTML=`<span class="dot" style="background:${p.color}"></span><span>${p.label}</span><span>${activeParts.length?EUR.format(p.value):"-"}</span>`; row.onmouseenter=()=>{canvas.dataset.hoverIndex=idx;renderBreakdownPie(canvasId, legendId, parts)}; row.onmouseleave=()=>{canvas.dataset.hoverIndex=-1;renderBreakdownPie(canvasId, legendId, parts)}; legend.appendChild(row);});
+  canvas.onmousemove=(e)=>{const r=canvas.getBoundingClientRect(); const x=e.clientX-r.left-90; const y=e.clientY-r.top-90; const dist=Math.sqrt(x*x+y*y); if(dist>72){if(canvas.dataset.hoverIndex!=="-1"){canvas.dataset.hoverIndex=-1;renderBreakdownPie(canvasId, legendId, parts);}return;} let a=Math.atan2(y,x)+Math.PI/2; if(a<0)a+=Math.PI*2; let acc=0,found=-1; sourceParts.forEach((p,idx)=>{acc+=(p.value/total)*Math.PI*2; if(found===-1&&a<=acc) found=idx;}); if(String(found)!==canvas.dataset.hoverIndex){canvas.dataset.hoverIndex=found;renderBreakdownPie(canvasId, legendId, parts);} };
+  canvas.onmouseleave=()=>{canvas.dataset.hoverIndex=-1;renderBreakdownPie(canvasId, legendId, parts);};
+}
+
+function renderPie(t){
   const parts=[
     {label:"Spese stipendio",value:t.spentSalary,color:"#e5be4b"},
     {label:"Spese extra",value:t.spentExtra,color:"#fa5e56"},
     {label:"Risparmio stipendio",value:t.saveSalary,color:"#55c26f"},
     {label:"Risparmio extra",value:t.saveExtra,color:"#6a90ff"}
-  ].filter(p=>p.value>0);
-  const total=parts.reduce((s,p)=>s+p.value,0)||1;
-  const hoverIndex=Number(canvas.dataset.hoverIndex||-1);
-  ctx.clearRect(0,0,180,180);
-  let start=-Math.PI/2;
-  parts.forEach((p,idx)=>{
-    const angle=(p.value/total)*Math.PI*2; const end=start+angle; const isHover=idx===hoverIndex;
-    const off=isHover?8:0; const mid=(start+end)/2; const cx=90+Math.cos(mid)*off; const cy=90+Math.sin(mid)*off;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,72,start,end); ctx.closePath(); ctx.fillStyle=p.color; ctx.fill(); start=end;
-  });
-  const legend=$("pieLegend"); legend.innerHTML="";
-  parts.forEach((p,idx)=>{const row=document.createElement("div"); row.className="legend-row"; row.innerHTML=`<span class="dot" style="background:${p.color}"></span><span>${p.label}</span><span>${EUR.format(p.value)}</span>`; row.onmouseenter=()=>{canvas.dataset.hoverIndex=idx;renderPie(t)}; row.onmouseleave=()=>{canvas.dataset.hoverIndex=-1;renderPie(t)}; legend.appendChild(row);});
-  canvas.onmousemove=(e)=>{const r=canvas.getBoundingClientRect(); const x=e.clientX-r.left-90; const y=e.clientY-r.top-90; const dist=Math.sqrt(x*x+y*y); if(dist>72){if(canvas.dataset.hoverIndex!=="-1"){canvas.dataset.hoverIndex=-1;renderPie(t);}return;} let a=Math.atan2(y,x)+Math.PI/2; if(a<0)a+=Math.PI*2; let acc=0,found=-1; parts.forEach((p,idx)=>{acc+=(p.value/total)*Math.PI*2; if(found===-1&&a<=acc) found=idx;}); if(String(found)!==canvas.dataset.hoverIndex){canvas.dataset.hoverIndex=found;renderPie(t);} };
-  canvas.onmouseleave=()=>{canvas.dataset.hoverIndex=-1;renderPie(t);};
+  ];
+  renderBreakdownPie("totalPie","pieLegend",parts);
+  renderBreakdownPie("salaryPie","salaryLegend",[
+    {label:"Spese stipendio",value:t.spentSalary,color:"#e5be4b"},
+    {label:"Risparmio stipendio",value:t.saveSalary,color:"#55c26f"},
+    {label:"Investimenti stipendio",value:t.invSalary,color:"#6a90ff"}
+  ]);
+  renderBreakdownPie("extraPie","extraLegend",[
+    {label:"Spese extra",value:t.spentExtra,color:"#fa5e56"},
+    {label:"Risparmio extra",value:t.saveExtra,color:"#55c26f"},
+    {label:"Investimenti extra",value:t.invExtra,color:"#6a90ff"}
+  ]);
 }
 
 function renderCharts(t){
