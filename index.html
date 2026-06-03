@@ -120,10 +120,17 @@
     .move-flags{grid-template-columns:220px minmax(0,1fr);align-items:start}
     .move-flags .flag-copy{display:grid;gap:4px}
     .move-flags .flag-title{font:700 13px/1 "Syne",sans-serif;color:var(--accent-strong)}
+    .section-stack{display:grid;gap:16px;margin-top:14px}
     .moves-stack{display:grid;gap:14px;margin-top:14px}
     .subsection{display:grid;gap:8px}
     .subsection-label{display:flex;align-items:center;gap:8px;padding:0 4px;color:var(--accent-strong);font:700 14px/1 "Syne",sans-serif}
     .subsection-label::before{content:"";width:8px;height:8px;border-radius:999px;background:var(--accent)}
+    .menu-panel{margin:0;padding:0;border:none;background:transparent}
+    .menu-panel summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid color-mix(in srgb, var(--border) 80%, transparent);border-radius:14px;background:color-mix(in srgb, var(--surface) 92%, white 8%);list-style:none}
+    .menu-panel summary::-webkit-details-marker{display:none}
+    .menu-panel summary::after{content:"Apri";font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .menu-panel[open] summary::after{content:"Chiudi"}
+    .menu-panel .menu-content{display:grid;gap:10px;padding-top:10px}
     .actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
     .toolbar-grid{display:grid;grid-template-columns:minmax(240px,1fr) 130px 130px;gap:8px;margin-top:10px;align-items:center}
     .pie-wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:center}
@@ -217,6 +224,8 @@
     @media (max-width:980px){
       .app{
         width:min(100%,920px);
+        padding:18px;
+        gap:14px;
       }
       .charts{grid-template-columns:1fr}
       .charts > :first-child,
@@ -236,6 +245,26 @@
       .forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
       .pie-wrap{grid-template-columns:1fr}
       .move-flags{grid-template-columns:1fr}
+    }
+    @media (max-width:720px){
+      .app{padding:12px;gap:12px}
+      h1{font-size:34px}
+      h2{font-size:22px}
+      .card{padding:10px;border-radius:16px}
+      .row{padding:10px;gap:8px}
+      .kpi,.split-grid,.forecast-grid{grid-template-columns:1fr}
+      .status-row,.profile-grid,.section-grid,.actions-grid{grid-template-columns:1fr}
+      .toolbar-grid{grid-template-columns:1fr}
+      .bar{grid-template-columns:1fr;gap:6px}
+      .move-row{grid-template-columns:1fr;gap:6px}
+      .move-row > :last-child{justify-self:start}
+      .wealth-row,.asset-create,.goal-row,.recurring-row,.move-filter-row,.transfer-row,.upcoming-row,.extra-create-row{grid-template-columns:1fr !important}
+      .cat-create{grid-template-columns:1fr;grid-template-areas:"name" "budget" "bucket" "add"}
+      .move-entry{grid-template-columns:1fr;grid-template-areas:"date" "type" "desc" "cat" "asset" "amount" "save"}
+      .status-row #todayTracker,
+      .status-row #saveStatus,
+      .status-row #resetAllBtn{justify-self:stretch;grid-column:auto}
+      .menu-panel summary{padding:11px 12px}
     }
     @media (max-width:1450px){
       .move-entry{
@@ -455,128 +484,190 @@
 
   <section class="income card">
     <div class="help-inline"><h2>Entrate</h2><button class="help-btn" data-help="entrate">?</button></div>
-    <div class="list">
-      <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="text" inputmode="decimal" placeholder="0,00"></div>
-      <div class="row"><span class="label">Quota investimenti su residuo non vitale (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
-      <div class="row"><span class="label">Target fondo emergenza</span><input id="emergencyTarget" type="text" inputmode="decimal" placeholder="0,00"></div>
-    </div>
-    <p class="muted" style="margin-top:8px">La quota investimenti viene presa dopo le spese essenziali e prima di svago e risparmio finale.</p>
-    <p class="label" style="margin-top:10px">Guadagni extra mese (totale)</p>
-    <p class="value blue" id="extraProfitTotal" style="font-size:26px">â‚¬0</p>
-    <details>
-      <summary>Apri elenco compravendite</summary>
-      <div id="extraList" class="list"></div>
-      <div class="row" style="grid-template-columns:1fr 110px 110px 110px 90px 90px 90px 90px auto">
-        <input id="newExtraDesc" type="text" placeholder="Oggetto">
-        <select id="newExtraStatus"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select>
-        <input id="newExtraPlatform" type="text" placeholder="Piattaforma">
-        <select id="newExtraPayment"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select>
-        <select id="newExtraDelivery"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select>
-        <input id="newExtraBuy" type="text" inputmode="decimal" placeholder="Comprato">
-        <input id="newExtraSell" type="text" inputmode="decimal" placeholder="Venduto">
-        <input id="newExtraFees" type="text" inputmode="decimal" placeholder="Comm.">
-        <input id="newExtraShip" type="text" inputmode="decimal" placeholder="Sped.">
-        <button id="addExtra" class="btn-primary btn-mini">+ Extra</button>
+    <div class="section-stack">
+      <div class="subsection">
+        <div class="subsection-label">Configurazione entrate</div>
+        <div class="list">
+          <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="text" inputmode="decimal" placeholder="0,00"></div>
+          <div class="row"><span class="label">Quota investimenti su residuo non vitale (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
+          <div class="row"><span class="label">Target fondo emergenza</span><input id="emergencyTarget" type="text" inputmode="decimal" placeholder="0,00"></div>
+        </div>
+        <p class="muted">La quota investimenti viene presa dopo le spese essenziali e prima di svago e risparmio finale.</p>
       </div>
-      <div id="platformProfitBreakdown" class="notice" style="margin-top:8px">Profitto per piattaforma in arrivo.</div>
-      <details style="margin-top:8px">
-        <summary>Archivio vendite concluse</summary>
-        <div id="archivedExtraList" class="list"></div>
-      </details>
-    </details>
-    <div class="kpi">
-      <div class="card"><p class="label">Totale</p><p class="value green" id="incomeTotal">&euro;0</p></div>
-      <div class="card"><p class="label">Stipendio</p><p class="value" id="salaryTotal">&euro;0</p></div>
-      <div class="card"><p class="label">Extra</p><p class="value blue" id="extraOnlyTotal">&euro;0</p></div>
-      <div class="card"><p class="label">Risparmio totale</p><p class="value" id="savingsTotal">&euro;0</p></div>
-    </div>
-    <p class="subtle-title">Previsioni</p>
-    <div class="split-grid">
-      <div class="card"><p class="label">Previsione fine mese</p><p class="value" id="monthForecast">&euro;0</p></div>
-      <div class="card"><p class="label">Previsione da budget</p><p class="value" id="budgetForecast">&euro;0</p></div>
-      <div class="card"><p class="label">Previsto vs reale</p><p class="value" id="forecastVsActual">&euro;0</p></div>
-      <div class="card"><p class="label">Target investimenti automatico</p><p class="value blue" id="investTargetAuto">&euro;0</p></div>
-      <div class="card"><p class="label">Profitto extra mese</p><p class="value green" id="profitMonth">&euro;0</p></div>
-      <div class="card"><p class="label">Profitto extra anno</p><p class="value green" id="profitYear">&euro;0</p></div>
-    </div>
-    <div class="forecast-grid">
-      <div class="card"><p class="label">Simulatore spesa</p><input id="whatIfAmount" type="text" inputmode="decimal" placeholder="Importo ipotetico"><p class="muted" id="whatIfResult" style="margin-top:8px">Inserisci un importo per vedere l'impatto.</p></div>
-      <div class="card"><p class="label">Alert budget</p><p class="value" id="budgetAlertDays">--</p><p class="muted" id="budgetAlertText">In attesa di dati.</p></div>
-      <div class="card"><p class="label">Come si calcola</p><p class="muted" id="forecastExplain">Spiegazione calcoli in arrivo.</p></div>
-    </div>
-    <p class="subtle-title">Obiettivi</p>
-    <div class="split-grid">
-      <div class="card">
-        <p class="label">Fondo emergenza</p>
-        <p class="value" id="emergencyProgressValue">&euro;0</p>
-        <div class="progress" style="margin-top:8px"><div id="emergencyProgress" style="background:var(--accent);width:0%"></div></div>
+
+      <div class="subsection">
+        <div class="subsection-label">Compravendite extra</div>
+        <p class="label">Guadagni extra mese (totale)</p>
+        <p class="value blue" id="extraProfitTotal" style="font-size:26px">â‚¬0</p>
+        <details class="menu-panel">
+          <summary>Apri elenco compravendite</summary>
+          <div class="menu-content">
+            <div id="extraList" class="list"></div>
+            <div class="row extra-create-row" style="grid-template-columns:1fr 110px 110px 110px 90px 90px 90px 90px auto">
+              <input id="newExtraDesc" type="text" placeholder="Oggetto">
+              <select id="newExtraStatus"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select>
+              <input id="newExtraPlatform" type="text" placeholder="Piattaforma">
+              <select id="newExtraPayment"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select>
+              <select id="newExtraDelivery"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select>
+              <input id="newExtraBuy" type="text" inputmode="decimal" placeholder="Comprato">
+              <input id="newExtraSell" type="text" inputmode="decimal" placeholder="Venduto">
+              <input id="newExtraFees" type="text" inputmode="decimal" placeholder="Comm.">
+              <input id="newExtraShip" type="text" inputmode="decimal" placeholder="Sped.">
+              <button id="addExtra" class="btn-primary btn-mini">+ Extra</button>
+            </div>
+            <div id="platformProfitBreakdown" class="notice">Profitto per piattaforma in arrivo.</div>
+            <details class="menu-panel">
+              <summary>Archivio vendite concluse</summary>
+              <div class="menu-content">
+                <div id="archivedExtraList" class="list"></div>
+              </div>
+            </details>
+          </div>
+        </details>
       </div>
-      <div class="card">
-        <p class="label">Entrate vs uscite per fonte</p>
-        <p class="muted" id="sourceBreakdown">Stipendio â‚¬0 / Extra â‚¬0 / Uscite â‚¬0</p>
+
+      <div class="subsection">
+        <div class="subsection-label">Riepilogo mese</div>
+        <div class="kpi">
+          <div class="card"><p class="label">Totale</p><p class="value green" id="incomeTotal">&euro;0</p></div>
+          <div class="card"><p class="label">Stipendio</p><p class="value" id="salaryTotal">&euro;0</p></div>
+          <div class="card"><p class="label">Extra</p><p class="value blue" id="extraOnlyTotal">&euro;0</p></div>
+          <div class="card"><p class="label">Risparmio totale</p><p class="value" id="savingsTotal">&euro;0</p></div>
+        </div>
       </div>
-    </div>
-    <p class="subtle-title">Pagamenti in arrivo</p>
-    <div class="card">
-      <p class="label">Totale atteso</p>
-      <p class="value blue" id="upcomingPaymentsTotal">&euro;0</p>
-      <div id="upcomingPaymentsList" class="list"></div>
-      <div class="row" style="grid-template-columns:minmax(0,1fr) 120px 120px auto">
-        <input id="newUpcomingDesc" type="text" placeholder="Pagamento atteso">
-        <input id="newUpcomingAmount" type="text" inputmode="decimal" placeholder="Importo">
-        <input id="newUpcomingDays" type="number" min="0" step="1" placeholder="Tra giorni">
-        <button id="addUpcomingPayment" class="btn-primary btn-mini">+ Aggiungi</button>
+
+      <div class="subsection">
+        <div class="subsection-label">Previsioni e simulazioni</div>
+        <details class="menu-panel">
+          <summary>Apri previsioni, alert e simulatore</summary>
+          <div class="menu-content">
+            <div class="split-grid">
+              <div class="card"><p class="label">Previsione fine mese</p><p class="value" id="monthForecast">&euro;0</p></div>
+              <div class="card"><p class="label">Previsione da budget</p><p class="value" id="budgetForecast">&euro;0</p></div>
+              <div class="card"><p class="label">Previsto vs reale</p><p class="value" id="forecastVsActual">&euro;0</p></div>
+              <div class="card"><p class="label">Target investimenti automatico</p><p class="value blue" id="investTargetAuto">&euro;0</p></div>
+              <div class="card"><p class="label">Profitto extra mese</p><p class="value green" id="profitMonth">&euro;0</p></div>
+              <div class="card"><p class="label">Profitto extra anno</p><p class="value green" id="profitYear">&euro;0</p></div>
+            </div>
+            <div class="forecast-grid">
+              <div class="card"><p class="label">Simulatore spesa</p><input id="whatIfAmount" type="text" inputmode="decimal" placeholder="Importo ipotetico"><p class="muted" id="whatIfResult" style="margin-top:8px">Inserisci un importo per vedere l'impatto.</p></div>
+              <div class="card"><p class="label">Alert budget</p><p class="value" id="budgetAlertDays">--</p><p class="muted" id="budgetAlertText">In attesa di dati.</p></div>
+              <div class="card"><p class="label">Come si calcola</p><p class="muted" id="forecastExplain">Spiegazione calcoli in arrivo.</p></div>
+            </div>
+          </div>
+        </details>
       </div>
-    </div>
-    <div id="goalsList" class="list"></div>
-    <div class="row goal-row">
-      <input id="newGoalName" type="text" placeholder="Nuovo obiettivo risparmio">
-      <input id="newGoalTarget" type="text" inputmode="decimal" placeholder="Target">
-      <button id="addGoal" class="btn-primary btn-mini">+ Obiettivo</button>
+
+      <div class="subsection">
+        <div class="subsection-label">Obiettivi e sicurezza</div>
+        <div class="split-grid">
+          <div class="card">
+            <p class="label">Fondo emergenza</p>
+            <p class="value" id="emergencyProgressValue">&euro;0</p>
+            <div class="progress" style="margin-top:8px"><div id="emergencyProgress" style="background:var(--accent);width:0%"></div></div>
+          </div>
+          <div class="card">
+            <p class="label">Entrate vs uscite per fonte</p>
+            <p class="muted" id="sourceBreakdown">Stipendio â‚¬0 / Extra â‚¬0 / Uscite â‚¬0</p>
+          </div>
+        </div>
+        <div id="goalsList" class="list"></div>
+        <div class="row goal-row">
+          <input id="newGoalName" type="text" placeholder="Nuovo obiettivo risparmio">
+          <input id="newGoalTarget" type="text" inputmode="decimal" placeholder="Target">
+          <button id="addGoal" class="btn-primary btn-mini">+ Obiettivo</button>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-label">Pagamenti in arrivo</div>
+        <details class="menu-panel">
+          <summary>Apri pagamenti in arrivo</summary>
+          <div class="menu-content">
+            <div class="card">
+              <p class="label">Totale atteso</p>
+              <p class="value blue" id="upcomingPaymentsTotal">&euro;0</p>
+              <div id="upcomingPaymentsList" class="list"></div>
+              <div class="row upcoming-row" style="grid-template-columns:minmax(0,1fr) 120px 120px auto">
+                <input id="newUpcomingDesc" type="text" placeholder="Pagamento atteso">
+                <input id="newUpcomingAmount" type="text" inputmode="decimal" placeholder="Importo">
+                <input id="newUpcomingDays" type="number" min="0" step="1" placeholder="Tra giorni">
+                <button id="addUpcomingPayment" class="btn-primary btn-mini">+ Aggiungi</button>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </div>
   </section>
 
   <section class="moves card" id="movimenti">
     <div class="help-inline"><h2>Movimenti</h2><button class="help-btn" data-help="movimenti">?</button></div>
-    <div class="row move-entry">
-      <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="text" inputmode="decimal" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
-    </div>
-    <div class="row" style="grid-template-columns:1fr 140px 140px">
-      <input id="moveSearch" type="text" placeholder="Cerca nei movimenti">
-      <select id="movePeriod"><option value="month">Mese corrente</option><option value="week">Ultimi 7 giorni</option><option value="all">Tutto</option></select>
-      <input id="moveMonthFilter" type="month">
-    </div>
     <div class="moves-stack">
       <div class="subsection">
-        <div class="subsection-label">Periodicita spesa</div>
-        <div class="row move-flags">
-          <select id="moveFixedCadence">
-            <option value="none">Spesa normale</option>
-            <option value="monthly">Spesa mensile fissa</option>
-            <option value="weekly">Spesa settimanale fissa</option>
-          </select>
-          <div class="flag-copy">
-            <span class="flag-title">Impatto sulla previsione</span>
-            <span class="muted">Usa "mensile fissa" per affitto o bollette e "settimanale fissa" per spese che si ripetono ogni settimana.</span>
-          </div>
+        <div class="subsection-label">Nuovo movimento</div>
+        <div class="row move-entry">
+          <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="text" inputmode="decimal" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
         </div>
+      </div>
+      <div class="subsection">
+        <div class="subsection-label">Filtri elenco</div>
+        <details class="menu-panel">
+          <summary>Apri filtri movimenti</summary>
+          <div class="menu-content">
+            <div class="row move-filter-row" style="grid-template-columns:1fr 140px 140px">
+              <input id="moveSearch" type="text" placeholder="Cerca nei movimenti">
+              <select id="movePeriod"><option value="month">Mese corrente</option><option value="week">Ultimi 7 giorni</option><option value="all">Tutto</option></select>
+              <input id="moveMonthFilter" type="month">
+            </div>
+          </div>
+        </details>
+      </div>
+      <div class="subsection">
+        <div class="subsection-label">Periodicita spesa</div>
+        <details class="menu-panel">
+          <summary>Apri periodicita previsione</summary>
+          <div class="menu-content">
+            <div class="row move-flags">
+              <select id="moveFixedCadence">
+                <option value="none">Spesa normale</option>
+                <option value="monthly">Spesa mensile fissa</option>
+                <option value="weekly">Spesa settimanale fissa</option>
+              </select>
+              <div class="flag-copy">
+                <span class="flag-title">Impatto sulla previsione</span>
+                <span class="muted">Usa "mensile fissa" per affitto o bollette e "settimanale fissa" per spese che si ripetono ogni settimana.</span>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
       <div class="subsection">
         <div class="subsection-label">Trasferimento tra conti</div>
-        <div class="row" style="grid-template-columns:1fr 1fr 120px auto">
-          <select id="transferFrom"></select>
-          <select id="transferTo"></select>
-          <input id="transferAmount" type="text" inputmode="decimal" placeholder="Importo">
-          <button id="addTransfer" class="btn-mini">Trasferisci</button>
-        </div>
+        <details class="menu-panel">
+          <summary>Apri trasferimento tra conti</summary>
+          <div class="menu-content">
+            <div class="row transfer-row" style="grid-template-columns:1fr 1fr 120px auto">
+              <select id="transferFrom"></select>
+              <select id="transferTo"></select>
+              <input id="transferAmount" type="text" inputmode="decimal" placeholder="Importo">
+              <button id="addTransfer" class="btn-mini">Trasferisci</button>
+            </div>
+          </div>
+        </details>
       </div>
       <div class="subsection">
         <div class="subsection-label">Ricorrente mensile</div>
-        <div class="row recurring-row">
-          <span class="muted">Crea un movimento ricorrente mensile usando i dati compilati sopra.</span>
-          <input id="recurringDay" type="number" min="1" max="31" placeholder="Giorno">
-          <button id="addRecurring" class="btn-mini">+ Ricorrente</button>
-        </div>
+        <details class="menu-panel">
+          <summary>Apri ricorrente mensile</summary>
+          <div class="menu-content">
+            <div class="row recurring-row">
+              <span class="muted">Crea un movimento ricorrente mensile usando i dati compilati sopra.</span>
+              <input id="recurringDay" type="number" min="1" max="31" placeholder="Giorno">
+              <button id="addRecurring" class="btn-mini">+ Ricorrente</button>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
     <div class="list" id="movesList"></div>
@@ -597,8 +688,12 @@
       <button id="addCat" class="btn-primary btn-mini">+ Categoria</button>
     </div>
     <div style="margin-top:8px"><p class="label">Uso budget totale</p><div class="progress"><div id="budgetProgress" style="background:var(--green);width:0%"></div></div></div>
-    <p class="subtle-title">Top categorie spesa</p>
-    <div id="topCategories" class="list"></div>
+    <details class="menu-panel" style="margin-top:12px">
+      <summary>Apri top categorie spesa</summary>
+      <div class="menu-content">
+        <div id="topCategories" class="list"></div>
+      </div>
+    </details>
   </section>
 
   <section class="wealth card" id="patrimonio">
@@ -610,8 +705,12 @@
       <div class="card"><p class="label">Risparmio totale</p><p class="value blue" id="savedTotal">â‚¬0</p></div>
       <div class="card"><p class="label">Investimenti LT</p><p class="value" style="color:var(--accent)" id="investTotal">â‚¬0</p></div>
     </div>
-    <p class="subtle-title">Registro attivitÃ  recenti</p>
-    <div id="auditLogList" class="list"></div>
+    <details class="menu-panel" style="margin-top:12px">
+      <summary>Apri registro attivita recenti</summary>
+      <div class="menu-content">
+        <div id="auditLogList" class="list"></div>
+      </div>
+    </details>
   </section>
 </main>
 
