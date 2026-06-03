@@ -755,7 +755,7 @@ const assetBucket=(asset)=>{
   if (name.includes("rispar")) return "saving";
   return "cash";
 };
-const isRealizedExtra=(e)=>e?.status==="sold" || (num(e?.sell)>0 && e?.paymentStatus==="paid");
+const isRealizedExtra=(e)=>e?.status==="sold" || e?.deliveryStatus==="delivered";
 const num=(v)=>{
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   let s = String(v ?? "").trim();
@@ -947,6 +947,7 @@ function normalizeState() {
     if (!e.deliveryStatus) e.deliveryStatus = "none";
     if (!e.paymentStatus) e.paymentStatus = "none";
     if (typeof e.archived !== "boolean") e.archived = false;
+    if (!("creditTxId" in e)) e.creditTxId = "";
   });
 }
 
@@ -1016,6 +1017,77 @@ async function forceCloudSave() {
 }
 normalizeState();
 
+function ensureExtraIncomeCategory() {
+  let cat = state.categories.find(c => c.id === "extra-income");
+  if (!cat) {
+    cat = {
+      id: "extra-income",
+      name: "Extra incassati",
+      budget: 0,
+      bucket: "extra",
+      purpose: "saving",
+      useSalary: false,
+      useExtra: true,
+      cadence: "variable"
+    };
+    state.categories.push(cat);
+  }
+  return cat.id;
+}
+
+function removeExtraCredit(extra) {
+  if (!extra?.creditTxId) return null;
+  const tx = state.transactions.find(t => t.id === extra.creditTxId);
+  if (tx) {
+    applyTransactionToAsset(tx, -1);
+    state.transactions = state.transactions.filter(t => t.id !== tx.id);
+  }
+  extra.creditTxId = "";
+  return tx || null;
+}
+
+function syncExtraCredit(extra) {
+  if (!extra) return;
+  const shouldCredit = extra.deliveryStatus === "delivered";
+  const amount = extraNet(extra);
+  const asset = state.assets.find(a => assetBucket(a) === "cash") || state.assets[0];
+  if (!shouldCredit || !amount || !asset) {
+    removeExtraCredit(extra);
+    return;
+  }
+  const categoryId = ensureExtraIncomeCategory();
+  if (!extra.creditTxId) {
+    const tx = {
+      id: uid(),
+      date: today(),
+      desc: `Extra ${extra.desc}`,
+      type: "income",
+      categoryId,
+      assetId: asset.id,
+      amount,
+      extraId: extra.id
+    };
+    state.transactions.push(tx);
+    applyTransactionToAsset(tx, 1);
+    extra.creditTxId = tx.id;
+    return;
+  }
+  const tx = state.transactions.find(t => t.id === extra.creditTxId);
+  if (!tx) {
+    extra.creditTxId = "";
+    syncExtraCredit(extra);
+    return;
+  }
+  if (num(tx.amount) !== amount || tx.assetId !== asset.id) {
+    applyTransactionToAsset(tx, -1);
+    tx.amount = amount;
+    tx.assetId = asset.id;
+    applyTransactionToAsset(tx, 1);
+  }
+  tx.desc = `Extra ${extra.desc}`;
+  tx.categoryId = categoryId;
+}
+
 function totals(){
   const salary=num(state.income.salary);
   const currentMonth = monthKey();
@@ -1030,9 +1102,11 @@ function totals(){
   const txByCat = {};
   const expenseTxCurrentMonth = [];
   state.transactions.forEach(t=>{
-    byCat[t.categoryId]=(byCat[t.categoryId]||0)+(t.amount||0);
-    txByCat[t.categoryId]=(txByCat[t.categoryId]||0)+(t.amount||0);
-    if (t.type === "expense" && String(t.date || "").startsWith(currentMonth)) expenseTxCurrentMonth.push(t);
+    if (t.type === "expense") {
+      byCat[t.categoryId]=(byCat[t.categoryId]||0)+(t.amount||0);
+      txByCat[t.categoryId]=(txByCat[t.categoryId]||0)+(t.amount||0);
+      if (String(t.date || "").startsWith(currentMonth)) expenseTxCurrentMonth.push(t);
+    }
   });
 
   state.categories.forEach(cat=>{
@@ -1290,42 +1364,43 @@ function renderExtras(){
     row.querySelector(`[data-exdelivery="${e.id}"]`).value = e.deliveryStatus || "none";
   });
   box.querySelectorAll("[data-exdesc]").forEach(i=>{
-    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdesc).desc=i.value;save();};
+    i.oninput=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exdesc); extra.desc=i.value; syncExtraCredit(extra); saveDraft();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exdesc); extra.desc=i.value; syncExtraCredit(extra); save(); render();};
   });
   box.querySelectorAll("[data-exstatus]").forEach(i=>{
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exstatus).status=i.value;save();render();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exstatus); extra.status=i.value; save();render();};
   });
   box.querySelectorAll("[data-explatform]").forEach(i=>{
     i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.explatform).platform=i.value;saveDraft();};
     i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.explatform).platform=i.value;save();render();};
   });
   box.querySelectorAll("[data-expay]").forEach(i=>{
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.expay).paymentStatus=i.value;save();render();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.expay); extra.paymentStatus=i.value; save();render();};
   });
   box.querySelectorAll("[data-exdelivery]").forEach(i=>{
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exdelivery).deliveryStatus=i.value;save();render();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exdelivery); extra.deliveryStatus=i.value; syncExtraCredit(extra); save();render();};
   });
   box.querySelectorAll("[data-exbuy]").forEach(i=>{
-    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exbuy).buy=num(i.value);save();render();};
+    i.oninput=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exbuy); extra.buy=num(i.value); syncExtraCredit(extra); saveDraft();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exbuy); extra.buy=num(i.value); syncExtraCredit(extra); save();render();};
   });
   box.querySelectorAll("[data-exsell]").forEach(i=>{
-    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exsell).sell=num(i.value);save();render();};
+    i.oninput=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exsell); extra.sell=num(i.value); syncExtraCredit(extra); saveDraft();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exsell); extra.sell=num(i.value); syncExtraCredit(extra); save();render();};
   });
   box.querySelectorAll("[data-exfees]").forEach(i=>{
-    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exfees).fees=num(i.value);save();render();};
+    i.oninput=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exfees); extra.fees=num(i.value); syncExtraCredit(extra); saveDraft();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exfees); extra.fees=num(i.value); syncExtraCredit(extra); save();render();};
   });
   box.querySelectorAll("[data-exship]").forEach(i=>{
-    i.oninput=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);saveDraft();};
-    i.onchange=()=>{state.extras.find(x=>x.id===i.dataset.exship).shipping=num(i.value);save();render();};
+    i.oninput=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exship); extra.shipping=num(i.value); syncExtraCredit(extra); saveDraft();};
+    i.onchange=()=>{const extra=state.extras.find(x=>x.id===i.dataset.exship); extra.shipping=num(i.value); syncExtraCredit(extra); save();render();};
   });
   box.querySelectorAll("[data-exdel]").forEach(b=>b.onclick=()=>{
     const extra = state.extras.find(x=>x.id===b.dataset.exdel);
     if (!extra) return;
-    stashUndo({ type: "extra", payload: extra });
+    const creditTx = removeExtraCredit(extra);
+    stashUndo({ type: "extra", payload: { extra: { ...extra }, creditTx } });
     state.extras=state.extras.filter(x=>x.id!==b.dataset.exdel);
     logAction(`Eliminata compravendita ${extra.desc}`);
     save();
@@ -1734,7 +1809,7 @@ $("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.
 $("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));save();render();};
 $("emergencyTarget").oninput=e=>{state.income.emergencyTarget=num(e.target.value);saveDraft();render();};
 $("emergencyTarget").onchange=e=>{state.income.emergencyTarget=num(e.target.value);save();render();};
-$("addExtra").onclick=async ()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const platform=$("newExtraPlatform").value.trim();const paymentStatus=$("newExtraPayment").value;const deliveryStatus=$("newExtraDelivery").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;state.extras.push({id:uid(),desc:d,status,platform,paymentStatus,deliveryStatus,buy,sell,fees,shipping,archived:false,date:today()});logAction(`Aggiunta compravendita ${d}`);$("newExtraDesc").value="";$("newExtraPlatform").value="";$("newExtraPayment").value="none";$("newExtraDelivery").value="none";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();await forceCloudSave();};
+$("addExtra").onclick=async ()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const platform=$("newExtraPlatform").value.trim();const paymentStatus=$("newExtraPayment").value;const deliveryStatus=$("newExtraDelivery").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;const extra={id:uid(),desc:d,status,platform,paymentStatus,deliveryStatus,buy,sell,fees,shipping,archived:false,date:today(),creditTxId:""};state.extras.push(extra);syncExtraCredit(extra);logAction(`Aggiunta compravendita ${d}`);$("newExtraDesc").value="";$("newExtraPlatform").value="";$("newExtraPayment").value="none";$("newExtraDelivery").value="none";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();await forceCloudSave();};
 $("moveDate").value=today();
 $("addMove").onclick=async ()=>{
   const date=$("moveDate").value||today();
@@ -1940,7 +2015,15 @@ $("undoDeleteBtn").onclick = async () => {
   if (!lastDeleted) return;
   const { type, payload } = lastDeleted;
   if (type === 'movimento') { state.transactions.push(payload); applyTransactionToAsset(payload,1); }
-  if (type === 'extra') state.extras.push(payload);
+  if (type === 'extra') {
+    const entry = payload?.extra ? payload : { extra: payload, creditTx: null };
+    state.extras.push(entry.extra);
+    if (entry.creditTx) {
+      state.transactions.push(entry.creditTx);
+      applyTransactionToAsset(entry.creditTx, 1);
+      entry.extra.creditTxId = entry.creditTx.id;
+    }
+  }
   if (type === 'obiettivo') state.goals.push(payload);
   if (type === 'ricorrente') state.recurring.push(payload);
   if (type === 'conto') state.assets.push(payload);
