@@ -23,6 +23,7 @@ function emptyPayload() {
     recurring: [],
     goals: [],
     transfers: [],
+    transferRecurring: [],
     auditLog: [],
     profile: { displayName: "", compactMobile: false, showOnboarding: true, theme: "sand" },
     assets: [

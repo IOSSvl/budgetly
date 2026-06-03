@@ -641,12 +641,19 @@
         <details class="menu-panel">
           <summary>Apri trasferimento tra conti</summary>
           <div class="menu-content">
-            <div class="row transfer-row" style="grid-template-columns:1fr 1fr 120px auto">
+            <div class="row transfer-row" style="grid-template-columns:1fr 1fr 120px 170px auto">
               <select id="transferFrom"></select>
               <select id="transferTo"></select>
               <input id="transferAmount" type="text" inputmode="decimal" placeholder="Importo">
+              <select id="transferCadence">
+                <option value="none">Trasferimento singolo</option>
+                <option value="monthly">Trasferimento mensile</option>
+                <option value="weekly">Trasferimento settimanale</option>
+              </select>
               <button id="addTransfer" class="btn-mini">Trasferisci</button>
             </div>
+            <p class="muted">Se scegli mensile o settimanale, il trasferimento viene programmato e riapplicato automaticamente.</p>
+            <div id="transferRecurringList" class="list"></div>
           </div>
         </details>
       </div>
@@ -719,6 +726,12 @@ const sum=(arr,fn)=>arr.reduce((s,x)=>s+fn(x),0);
 const clampPct=(x)=>Math.max(0,Math.min(100,x));
 const monthKey=(d=today())=>String(d).slice(0,7);
 const yearKey=(d=today())=>String(d).slice(0,4);
+const weekKey=(d=today())=>{
+  const date = new Date(`${d}T00:00:00`);
+  const day = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - day);
+  return date.toISOString().slice(0,10);
+};
 const daysInMonth=(d=today())=>new Date(Number(String(d).slice(0,4)), Number(String(d).slice(5,7)), 0).getDate();
 const recurringDate=(baseDate, day)=>{
   const year = Number(String(baseDate).slice(0,4));
@@ -727,6 +740,15 @@ const recurringDate=(baseDate, day)=>{
   const safeDay = Math.max(1, Math.min(lastDay, num(day) || 1));
   return `${year}-${String(month).padStart(2,"0")}-${String(safeDay).padStart(2,"0")}`;
 };
+const recurringWeekDate=(baseDate, weekday)=>{
+  const date = new Date(`${baseDate}T00:00:00`);
+  const mondayOffset = (date.getDay() + 6) % 7;
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - mondayOffset);
+  monday.setDate(monday.getDate() + Math.max(0, Math.min(6, num(weekday) || 0)));
+  return monday.toISOString().slice(0,10);
+};
+const weekdayLabel=(weekday)=>["lunedi","martedi","mercoledi","giovedi","venerdi","sabato","domenica"][Math.max(0, Math.min(6, num(weekday) || 0))];
 const num=(v)=>{
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   let s = String(v ?? "").trim();
@@ -813,6 +835,7 @@ function createEmptyState() {
     recurring: [],
     goals: [],
     transfers: [],
+    transferRecurring: [],
     auditLog: [],
     profile: { displayName: "", compactMobile: false, showOnboarding: true, theme: "sand" },
     assets: [
@@ -882,6 +905,7 @@ function normalizeState() {
   if (!Array.isArray(state.goals)) state.goals = [];
   if (!Array.isArray(state.recurring)) state.recurring = [];
   if (!Array.isArray(state.transfers)) state.transfers = [];
+  if (!Array.isArray(state.transferRecurring)) state.transferRecurring = [];
   if (!Array.isArray(state.auditLog)) state.auditLog = [];
   if (!state.profile || typeof state.profile !== "object") state.profile = { displayName: "", compactMobile: false, showOnboarding: true, theme: "sand" };
   if (typeof state.profile.displayName !== "string") state.profile.displayName = "";
@@ -1143,6 +1167,36 @@ function ensureRecurringForCurrentMonth() {
   if (changed) save();
 }
 
+function ensureRecurringTransfers() {
+  const currentMonth = monthKey();
+  const currentWeek = weekKey();
+  let changed = false;
+  state.transferRecurring.forEach((rec) => {
+    const cadence = rec.cadence || "monthly";
+    const periodKey = cadence === "weekly" ? currentWeek : currentMonth;
+    const exists = state.transfers.some(t => t.recurringTransferId === rec.id && t.recurringTransferPeriod === periodKey);
+    if (exists) return;
+    const fromAsset = state.assets.find(a => a.id === rec.fromId);
+    const toAsset = state.assets.find(a => a.id === rec.toId);
+    const amount = num(rec.amount);
+    if (!fromAsset || !toAsset || !amount) return;
+    const transfer = {
+      id: uid(),
+      date: cadence === "weekly" ? recurringWeekDate(today(), rec.weekday) : recurringDate(today(), rec.day),
+      fromId: rec.fromId,
+      toId: rec.toId,
+      amount,
+      recurringTransferId: rec.id,
+      recurringTransferPeriod: periodKey
+    };
+    fromAsset.value = num(fromAsset.value) - amount;
+    toAsset.value = num(toAsset.value) + amount;
+    state.transfers.push(transfer);
+    changed = true;
+  });
+  if (changed) save();
+}
+
 function renderRecurring() {
   const box = $("recurringList");
   if (!box) return;
@@ -1333,6 +1387,35 @@ function renderCategories(t){
     state.transactions=state.transactions.filter(tn=>tn.categoryId!==b.dataset.catdel);
     state.categories=state.categories.filter(c=>c.id!==b.dataset.catdel);
     logAction(`Eliminata categoria ${removedCategory?.name || "categoria"}`);
+    save();
+    render();
+  });
+}
+
+function renderTransferRecurring() {
+  const box = $("transferRecurringList");
+  if (!box) return;
+  box.innerHTML = "";
+  if (!state.transferRecurring.length) {
+    box.innerHTML = `<div class="row"><span class="muted">Nessun trasferimento programmato.</span></div>`;
+    return;
+  }
+  state.transferRecurring.forEach((rec) => {
+    const fromName = state.assets.find(a=>a.id===rec.fromId)?.name || "Conto";
+    const toName = state.assets.find(a=>a.id===rec.toId)?.name || "Conto";
+    const cadenceLabel = rec.cadence === "weekly"
+      ? `ogni ${weekdayLabel(rec.weekday)}`
+      : `ogni mese il giorno ${rec.day}`;
+    const row = document.createElement("div");
+    row.className = "row recurring-row";
+    row.innerHTML = `<span>Trasferimento <span class="muted">${fromName} -> ${toName} · ${cadenceLabel}</span></span><span class="blue">${EUR.format(rec.amount)}</span><button class="btn-mini icon-btn" data-trrecdel="${rec.id}" title="Elimina">&#128465;</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-trrecdel]").forEach((btn) => btn.onclick = () => {
+    const rec = state.transferRecurring.find(r => r.id === btn.dataset.trrecdel);
+    if (!rec) return;
+    stashUndo({ type: "trasferimento-ricorrente", payload: rec });
+    state.transferRecurring = state.transferRecurring.filter(r => r.id !== btn.dataset.trrecdel);
     save();
     render();
   });
@@ -1580,6 +1663,7 @@ function renderCharts(t){
 
 function render(){
   ensureRecurringForCurrentMonth();
+  ensureRecurringTransfers();
   const t=totals();
   updateProfileTheme();
   $("todayTracker").textContent = `Oggi ${new Date().toLocaleDateString("it-IT")}`;
@@ -1623,7 +1707,7 @@ function render(){
   $("userStatus").textContent = state.profile.displayName
     ? `Connesso come ${state.profile.displayName}`
     : $("userStatus").textContent;
-  renderExtras(); renderUpcomingPayments(t); renderMoveSelect(); renderMoves(); renderRecurring(); renderCategories(t); renderTopCategories(t); renderWealth(t); renderCharts(t);
+  renderExtras(); renderUpcomingPayments(t); renderMoveSelect(); renderMoves(); renderRecurring(); renderTransferRecurring(); renderCategories(t); renderTopCategories(t); renderWealth(t); renderCharts(t);
   const budgetTotalSalary = state.categories.reduce((acc,c)=>{
     const useSalary = !!c.useSalary;
     return acc + (useSalary ? (c.budget||0) : 0);
@@ -1665,7 +1749,37 @@ $("addAsset").onclick=async ()=>{const name=$("newAssetName").value.trim();const
 $("addGoal").onclick=async ()=>{const name=$("newGoalName").value.trim(); const target=num($("newGoalTarget").value); if(!name||!target)return; state.goals.push({id:uid(),name,target}); logAction(`Aggiunto obiettivo ${name}`); $("newGoalName").value=""; $("newGoalTarget").value=""; render(); await forceCloudSave();};
 $("addUpcomingPayment").onclick=async ()=>{const desc=$("newUpcomingDesc").value.trim();const amount=num($("newUpcomingAmount").value);const days=Math.max(0,Math.floor(num($("newUpcomingDays").value)));if(!desc||!amount)return;state.upcomingPayments.push({id:uid(),desc,amount,daysUntil:days,expectedDate:addDays(today(),days),received:false});logAction(`Aggiunto pagamento atteso ${desc}`);$("newUpcomingDesc").value="";$("newUpcomingAmount").value="";$("newUpcomingDays").value="";render();await forceCloudSave();};
 $("addRecurring").onclick=async ()=>{const desc=$("moveDesc").value.trim()||"Movimento ricorrente"; const type=$("moveType").value; const categoryId=$("moveCat").value; const assetId=$("moveAsset").value; const amount=num($("moveAmount").value); const day=Math.max(1,Math.min(31,num($("recurringDay").value)||new Date().getDate())); if(!categoryId||!amount)return; state.recurring.push({id:uid(),desc,type,categoryId,assetId,amount,day}); logAction(`Aggiunto ricorrente ${desc}`); $("recurringDay").value=""; render(); await forceCloudSave();};
-$("addTransfer").onclick=async ()=>{const fromId=$("transferFrom").value;const toId=$("transferTo").value;const amount=num($("transferAmount").value);if(!fromId||!toId||fromId===toId||!amount)return;const fromAsset=state.assets.find(a=>a.id===fromId);const toAsset=state.assets.find(a=>a.id===toId);if(!fromAsset||!toAsset)return;fromAsset.value=num(fromAsset.value)-amount;toAsset.value=num(toAsset.value)+amount;state.transfers.push({id:uid(),date:today(),fromId,toId,amount});logAction(`Trasferiti ${EUR.format(amount)} da ${fromAsset.name} a ${toAsset.name}`);$("transferAmount").value="";render();await forceCloudSave();};
+$("addTransfer").onclick=async ()=>{
+  const fromId=$("transferFrom").value;
+  const toId=$("transferTo").value;
+  const amount=num($("transferAmount").value);
+  const cadence=$("transferCadence").value || "none";
+  if(!fromId||!toId||fromId===toId||!amount)return;
+  const fromAsset=state.assets.find(a=>a.id===fromId);
+  const toAsset=state.assets.find(a=>a.id===toId);
+  if(!fromAsset||!toAsset)return;
+  if (cadence === "none") {
+    fromAsset.value=num(fromAsset.value)-amount;
+    toAsset.value=num(toAsset.value)+amount;
+    state.transfers.push({id:uid(),date:today(),fromId,toId,amount});
+    logAction(`Trasferiti ${EUR.format(amount)} da ${fromAsset.name} a ${toAsset.name}`);
+  } else {
+    state.transferRecurring.push({
+      id: uid(),
+      fromId,
+      toId,
+      amount,
+      cadence,
+      day: new Date().getDate(),
+      weekday: (new Date().getDay() + 6) % 7
+    });
+    logAction(`Programmato trasferimento ${cadence === "weekly" ? "settimanale" : "mensile"} di ${EUR.format(amount)} da ${fromAsset.name} a ${toAsset.name}`);
+  }
+  $("transferAmount").value="";
+  $("transferCadence").value="none";
+  render();
+  await forceCloudSave();
+};
 $("moveSearch").oninput=()=>render();
 $("movePeriod").onchange=()=>render();
 $("moveMonthFilter").onchange=()=>render();
@@ -1827,6 +1941,7 @@ $("undoDeleteBtn").onclick = async () => {
     if (toAsset) toAsset.value = num(toAsset.value) + num(payload.amount);
     state.transfers.push(payload);
   }
+  if (type === 'trasferimento-ricorrente') state.transferRecurring.push(payload);
   logAction(`Ripristinato elemento eliminato (${type})`);
   lastDeleted = null;
   $("undoDeleteBtn").textContent = 'Annulla elimina';
