@@ -120,6 +120,10 @@
     .move-flags{grid-template-columns:220px minmax(0,1fr);align-items:start}
     .move-flags .flag-copy{display:grid;gap:4px}
     .move-flags .flag-title{font:700 13px/1 "Syne",sans-serif;color:var(--accent-strong)}
+    .moves-stack{display:grid;gap:14px;margin-top:14px}
+    .subsection{display:grid;gap:8px}
+    .subsection-label{display:flex;align-items:center;gap:8px;padding:0 4px;color:var(--accent-strong);font:700 14px/1 "Syne",sans-serif}
+    .subsection-label::before{content:"";width:8px;height:8px;border-radius:999px;background:var(--accent)}
     .actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
     .toolbar-grid{display:grid;grid-template-columns:minmax(240px,1fr) 130px 130px;gap:8px;margin-top:10px;align-items:center}
     .pie-wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:center}
@@ -542,27 +546,38 @@
       <select id="movePeriod"><option value="month">Mese corrente</option><option value="week">Ultimi 7 giorni</option><option value="all">Tutto</option></select>
       <input id="moveMonthFilter" type="month">
     </div>
-    <div class="row move-flags" style="margin-top:8px">
-      <select id="moveFixedCadence">
-        <option value="none">Spesa normale</option>
-        <option value="monthly">Spesa mensile fissa</option>
-        <option value="weekly">Spesa settimanale fissa</option>
-      </select>
-      <div class="flag-copy">
-        <span class="flag-title">Periodicita previsione</span>
-        <span class="muted">Usa "mensile fissa" per affitto o bollette e "settimanale fissa" per spese che si ripetono ogni settimana.</span>
+    <div class="moves-stack">
+      <div class="subsection">
+        <div class="subsection-label">Periodicita spesa</div>
+        <div class="row move-flags">
+          <select id="moveFixedCadence">
+            <option value="none">Spesa normale</option>
+            <option value="monthly">Spesa mensile fissa</option>
+            <option value="weekly">Spesa settimanale fissa</option>
+          </select>
+          <div class="flag-copy">
+            <span class="flag-title">Impatto sulla previsione</span>
+            <span class="muted">Usa "mensile fissa" per affitto o bollette e "settimanale fissa" per spese che si ripetono ogni settimana.</span>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="row" style="grid-template-columns:1fr 1fr 120px auto">
-      <select id="transferFrom"></select>
-      <select id="transferTo"></select>
-      <input id="transferAmount" type="text" inputmode="decimal" placeholder="Importo">
-      <button id="addTransfer" class="btn-mini">Trasferisci</button>
-    </div>
-    <div class="row recurring-row" style="margin-top:8px">
-      <span class="muted">Crea un movimento ricorrente mensile usando i dati compilati sopra.</span>
-      <input id="recurringDay" type="number" min="1" max="31" placeholder="Giorno">
-      <button id="addRecurring" class="btn-mini">+ Ricorrente</button>
+      <div class="subsection">
+        <div class="subsection-label">Trasferimento tra conti</div>
+        <div class="row" style="grid-template-columns:1fr 1fr 120px auto">
+          <select id="transferFrom"></select>
+          <select id="transferTo"></select>
+          <input id="transferAmount" type="text" inputmode="decimal" placeholder="Importo">
+          <button id="addTransfer" class="btn-mini">Trasferisci</button>
+        </div>
+      </div>
+      <div class="subsection">
+        <div class="subsection-label">Ricorrente mensile</div>
+        <div class="row recurring-row">
+          <span class="muted">Crea un movimento ricorrente mensile usando i dati compilati sopra.</span>
+          <input id="recurringDay" type="number" min="1" max="31" placeholder="Giorno">
+          <button id="addRecurring" class="btn-mini">+ Ricorrente</button>
+        </div>
+      </div>
     </div>
     <div class="list" id="movesList"></div>
     <details>
