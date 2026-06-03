@@ -749,6 +749,12 @@ const recurringWeekDate=(baseDate, weekday)=>{
   return monday.toISOString().slice(0,10);
 };
 const weekdayLabel=(weekday)=>["lunedi","martedi","mercoledi","giovedi","venerdi","sabato","domenica"][Math.max(0, Math.min(6, num(weekday) || 0))];
+const assetBucket=(asset)=>{
+  const name = String(asset?.name || "").toLowerCase();
+  if (name.includes("invest")) return "invest";
+  if (name.includes("rispar")) return "saving";
+  return "cash";
+};
 const num=(v)=>{
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   let s = String(v ?? "").trim();
@@ -1105,13 +1111,18 @@ function totals(){
     const key = e.platform || "Altro";
     profitsByPlatform[key] = (profitsByPlatform[key] || 0) + extraNet(e);
   });
+  const savingsBalance = sum(state.assets.filter(a => assetBucket(a) === "saving"), a => num(a.value));
+  const investedBalance = sum(state.assets.filter(a => assetBucket(a) === "invest"), a => num(a.value));
+  const netWorth = sum(state.assets,a=>num(a.value));
 
   return {
     salary,extraTotal,totalIncome:salary+extraTotal,byCat,
     spentSalary,spentExtra,totalSpent:spentSalary+spentExtra,
     saveSalary,saveExtra,totalSave:saveSalary+saveExtra,
     invSalary,invExtra,totalInv:invSalary+invExtra,
-    netWorth:sum(state.assets,a=>num(a.value)),
+    netWorth,
+    savingsBalance,
+    investedBalance,
     budgetSalary:spentSalary,budgetExtra:spentExtra,
     monthForecast,
     budgetForecast,
@@ -1224,10 +1235,10 @@ function renderGoals(t) {
   if (!box) return;
   box.innerHTML = "";
   state.goals.forEach((goal) => {
-    const pct = goal.target ? clampPct((t.totalSave / num(goal.target)) * 100) : 0;
+    const pct = goal.target ? clampPct((t.savingsBalance / num(goal.target)) * 100) : 0;
     const row = document.createElement("div");
     row.className = "row";
-    row.innerHTML = `<span><strong>${goal.name}</strong><br><span class="muted">${EUR.format(t.totalSave)} su ${EUR.format(goal.target)}</span></span><span class="${pct >= 100 ? "green" : "blue"}">${Math.round(pct)}%</span><button class="btn-mini icon-btn" data-goaldel="${goal.id}" title="Elimina">&#128465;</button><div class="progress" style="grid-column:1 / -1"><div style="background:var(--green);width:${pct}%"></div></div>`;
+    row.innerHTML = `<span><strong>${goal.name}</strong><br><span class="muted">${EUR.format(t.savingsBalance)} su ${EUR.format(goal.target)}</span></span><span class="${pct >= 100 ? "green" : "blue"}">${Math.round(pct)}%</span><button class="btn-mini icon-btn" data-goaldel="${goal.id}" title="Elimina">&#128465;</button><div class="progress" style="grid-column:1 / -1"><div style="background:var(--green);width:${pct}%"></div></div>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-goaldel]").forEach((btn) => btn.onclick = () => {
@@ -1552,10 +1563,10 @@ function renderWealth(t){
     i.onchange=()=>{state.assets.find(a=>a.id===i.dataset.aval).value=num(i.value);save();render();};
   });
   box.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{if(state.assets.length<=1)return; const asset=state.assets.find(a=>a.id===b.dataset.adel); stashUndo({ type: 'conto', payload: asset }); state.assets=state.assets.filter(a=>a.id!==b.dataset.adel); logAction(`Eliminato conto ${asset?.name || "conto"}`); save(); render();});
-  $("netWorth").textContent=EUR.format(t.netWorth); $("savedTotal").textContent=EUR.format(t.totalSave); $("investTotal").textContent=EUR.format(t.totalInv);
+  $("netWorth").textContent=EUR.format(t.netWorth); $("savedTotal").textContent=EUR.format(t.savingsBalance); $("investTotal").textContent=EUR.format(t.investedBalance);
   const emergencyTarget = num(state.income.emergencyTarget);
-  const emergencyPct = emergencyTarget ? clampPct((t.totalSave / emergencyTarget) * 100) : 0;
-  $("emergencyProgressValue").textContent = `${EUR.format(t.totalSave)} / ${EUR.format(emergencyTarget)}`;
+  const emergencyPct = emergencyTarget ? clampPct((t.savingsBalance / emergencyTarget) * 100) : 0;
+  $("emergencyProgressValue").textContent = `${EUR.format(t.savingsBalance)} / ${EUR.format(emergencyTarget)}`;
   $("emergencyProgress").style.width = `${emergencyPct}%`;
   $("sourceBreakdown").textContent = `Stipendio ${EUR.format(t.salary)} / Extra ${EUR.format(t.extraTotal)} / Uscite ${EUR.format(t.totalSpent)}`;
   const auditBox = $("auditLogList");
@@ -1679,7 +1690,7 @@ function render(){
   $("incomeTotal").textContent=EUR.format(t.netWorth);
   $("salaryTotal").textContent=EUR.format(t.salary);
   $("extraOnlyTotal").textContent=EUR.format(t.extraTotal);
-  $("savingsTotal").textContent=EUR.format(t.totalSave);
+  $("savingsTotal").textContent=EUR.format(t.savingsBalance);
   $("monthForecast").textContent = EUR.format(t.monthForecast);
   $("budgetForecast").textContent = EUR.format(t.budgetForecast);
   $("forecastVsActual").textContent = EUR.format(t.forecastVsActual);
