@@ -1057,6 +1057,14 @@ function ensureSalaryIncomeCategory() {
   return cat.id;
 }
 
+function cleanupAutoSalaryCredits() {
+  const autoSalaryTx = state.transactions.filter(t => t.salaryCreditMonth);
+  if (!autoSalaryTx.length) return false;
+  autoSalaryTx.forEach((tx) => applyTransactionToAsset(tx, -1));
+  state.transactions = state.transactions.filter(t => !t.salaryCreditMonth);
+  return true;
+}
+
 function removeExtraCredit(extra) {
   if (!extra?.creditTxId) return false;
   const tx = state.transactions.find(t => t.id === extra.creditTxId);
@@ -1108,51 +1116,6 @@ function syncExtraCredit(extra) {
   }
   tx.desc = `Extra ${extra.desc}`;
   tx.categoryId = categoryId;
-  return changed;
-}
-
-function syncSalaryCredit() {
-  const currentMonth = monthKey();
-  const amount = num(state.income.salary);
-  const asset = state.assets.find(a => a.id === state.income.salaryAssetId) || null;
-  const tx = state.transactions.find(t => t.salaryCreditMonth === currentMonth);
-  if (!amount || !asset) {
-    if (tx) {
-      applyTransactionToAsset(tx, -1);
-      state.transactions = state.transactions.filter(t => t.id !== tx.id);
-      return true;
-    }
-    return false;
-  }
-  const categoryId = ensureSalaryIncomeCategory();
-  if (!tx) {
-    const salaryTx = {
-      id: uid(),
-      date: `${currentMonth}-01`,
-      desc: "Stipendio",
-      type: "income",
-      categoryId,
-      assetId: asset.id,
-      amount,
-      salaryCreditMonth: currentMonth
-    };
-    state.transactions.push(salaryTx);
-    applyTransactionToAsset(salaryTx, 1);
-    return true;
-  }
-  let changed = false;
-  if (num(tx.amount) !== amount || tx.assetId !== asset.id) {
-    applyTransactionToAsset(tx, -1);
-    tx.amount = amount;
-    tx.assetId = asset.id;
-    applyTransactionToAsset(tx, 1);
-    changed = true;
-  }
-  if (tx.categoryId !== categoryId || tx.desc !== "Stipendio") {
-    tx.categoryId = categoryId;
-    tx.desc = "Stipendio";
-    changed = true;
-  }
   return changed;
 }
 
@@ -1796,6 +1759,27 @@ function renderMoveSelect(){
   }
 }
 
+function applyMoveIncomePreset() {
+  const type = $("moveType")?.value;
+  const categoryId = $("moveCat")?.value;
+  const assetSel = $("moveAsset");
+  const amountInput = $("moveAmount");
+  if (type !== "income" || !categoryId || !assetSel || !amountInput) return;
+  if (categoryId === "salary-income") {
+    if (state.income.salaryAssetId && state.assets.some(a => a.id === state.income.salaryAssetId)) {
+      assetSel.value = state.income.salaryAssetId;
+    }
+    if (!String(amountInput.value || "").trim() && num(state.income.salary) > 0) {
+      amountInput.value = String(state.income.salary).replace(".", ",");
+    }
+  }
+  if (categoryId === "extra-income") {
+    if (state.income.extraAssetId && state.assets.some(a => a.id === state.income.extraAssetId)) {
+      assetSel.value = state.income.extraAssetId;
+    }
+  }
+}
+
 function renderPie(t){
   const canvas=$("totalPie");
   const ctx=canvas.getContext("2d");
@@ -1843,7 +1827,9 @@ function renderCharts(t){
 function render(){
   ensureRecurringForCurrentMonth();
   ensureRecurringTransfers();
-  let autoChanged = syncSalaryCredit();
+  ensureSalaryIncomeCategory();
+  ensureExtraIncomeCategory();
+  let autoChanged = cleanupAutoSalaryCredits();
   state.extras.forEach((extra) => {
     autoChanged = syncExtraCredit(extra) || autoChanged;
   });
@@ -1901,13 +1887,15 @@ function render(){
 }
 
 $("salary").oninput=e=>{state.income.salary=num(e.target.value);saveDraft();render();};
-$("salary").onchange=e=>{state.income.salary=num(e.target.value);syncSalaryCredit();save();render();};
+$("salary").onchange=e=>{state.income.salary=num(e.target.value);save();render();};
 $("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));saveDraft();render();};
 $("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));save();render();};
 $("emergencyTarget").oninput=e=>{state.income.emergencyTarget=num(e.target.value);saveDraft();render();};
 $("emergencyTarget").onchange=e=>{state.income.emergencyTarget=num(e.target.value);save();render();};
-$("salaryAssetId").onchange=e=>{state.income.salaryAssetId=e.target.value;syncSalaryCredit();save();render();};
+$("salaryAssetId").onchange=e=>{state.income.salaryAssetId=e.target.value;save();render();};
 $("extraAssetId").onchange=e=>{state.income.extraAssetId=e.target.value;state.extras.forEach(syncExtraCredit);save();render();};
+$("moveType").onchange=()=>applyMoveIncomePreset();
+$("moveCat").onchange=()=>applyMoveIncomePreset();
 $("addExtra").onclick=async ()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const platform=$("newExtraPlatform").value.trim();const paymentStatus=$("newExtraPayment").value;const deliveryStatus=$("newExtraDelivery").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;const extra={id:uid(),desc:d,status,platform,paymentStatus,deliveryStatus,buy,sell,fees,shipping,archived:false,date:today(),creditTxId:""};state.extras.push(extra);syncExtraCredit(extra);logAction(`Aggiunta compravendita ${d}`);$("newExtraDesc").value="";$("newExtraPlatform").value="";$("newExtraPayment").value="none";$("newExtraDelivery").value="none";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();await forceCloudSave();};
 $("moveDate").value=today();
 $("addMove").onclick=async ()=>{
