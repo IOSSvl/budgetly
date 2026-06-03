@@ -13,7 +13,7 @@ const PORT = Number(process.env.PORT || 3001);
 
 function emptyPayload() {
   return {
-    income: { salary: 0, investPct: 0, emergencyTarget: 0 },
+    income: { salary: 0, investPct: 0, emergencyTarget: 0, salaryAssetId: "", extraAssetId: "" },
     extras: [],
     upcomingPayments: [],
     categories: [

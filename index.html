@@ -491,6 +491,8 @@
         <div class="subsection-label">Configurazione entrate</div>
         <div class="list">
           <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="text" inputmode="decimal" placeholder="0,00"></div>
+          <div class="row"><span class="label">Conto accredito stipendio</span><select id="salaryAssetId"></select></div>
+          <div class="row"><span class="label">Conto accredito extra</span><select id="extraAssetId"></select></div>
           <div class="row"><span class="label">Quota investimenti su residuo non vitale (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
           <div class="row"><span class="label">Target fondo emergenza</span><input id="emergencyTarget" type="text" inputmode="decimal" placeholder="0,00"></div>
         </div>
@@ -832,7 +834,7 @@ function updateProfileTheme() {
 
 function createEmptyState() {
   return {
-    income: { salary: 0, investPct: 0, emergencyTarget: 0 },
+    income: { salary: 0, investPct: 0, emergencyTarget: 0, salaryAssetId: "", extraAssetId: "" },
     extras: [],
     upcomingPayments: [],
     categories: [
@@ -919,10 +921,12 @@ function normalizeState() {
   if (typeof state.profile.compactMobile !== "boolean") state.profile.compactMobile = false;
   if (typeof state.profile.showOnboarding !== "boolean") state.profile.showOnboarding = true;
   if (!["sand","dark"].includes(state.profile.theme)) state.profile.theme = "sand";
-  if (!state.income || typeof state.income !== "object") state.income = { salary: 0, investPct: 0, emergencyTarget: 0 };
+  if (!state.income || typeof state.income !== "object") state.income = { salary: 0, investPct: 0, emergencyTarget: 0, salaryAssetId: "", extraAssetId: "" };
   if (typeof state.income.salary !== "number") state.income.salary = num(state.income.salary);
   if (typeof state.income.investPct !== "number") state.income.investPct = num(state.income.investPct);
   if (typeof state.income.emergencyTarget !== "number") state.income.emergencyTarget = num(state.income.emergencyTarget);
+  if (typeof state.income.salaryAssetId !== "string") state.income.salaryAssetId = "";
+  if (typeof state.income.extraAssetId !== "string") state.income.extraAssetId = "";
   state.categories.forEach((c)=>{
     if (typeof c.useSalary !== "boolean") c.useSalary = c.bucket !== "extra";
     if (typeof c.useExtra !== "boolean") c.useExtra = c.bucket !== "salary";
@@ -1035,25 +1039,42 @@ function ensureExtraIncomeCategory() {
   return cat.id;
 }
 
+function ensureSalaryIncomeCategory() {
+  let cat = state.categories.find(c => c.id === "salary-income");
+  if (!cat) {
+    cat = {
+      id: "salary-income",
+      name: "Stipendio incassato",
+      budget: 0,
+      bucket: "salary",
+      purpose: "saving",
+      useSalary: true,
+      useExtra: false,
+      cadence: "variable"
+    };
+    state.categories.push(cat);
+  }
+  return cat.id;
+}
+
 function removeExtraCredit(extra) {
-  if (!extra?.creditTxId) return null;
+  if (!extra?.creditTxId) return false;
   const tx = state.transactions.find(t => t.id === extra.creditTxId);
   if (tx) {
     applyTransactionToAsset(tx, -1);
     state.transactions = state.transactions.filter(t => t.id !== tx.id);
   }
   extra.creditTxId = "";
-  return tx || null;
+  return !!tx;
 }
 
 function syncExtraCredit(extra) {
   if (!extra) return;
   const shouldCredit = extra.deliveryStatus === "delivered";
   const amount = extraNet(extra);
-  const asset = state.assets.find(a => assetBucket(a) === "cash") || state.assets[0];
+  const asset = state.assets.find(a => a.id === state.income.extraAssetId) || state.assets.find(a => assetBucket(a) === "cash") || state.assets[0];
   if (!shouldCredit || !amount || !asset) {
-    removeExtraCredit(extra);
-    return;
+    return removeExtraCredit(extra);
   }
   const categoryId = ensureExtraIncomeCategory();
   if (!extra.creditTxId) {
@@ -1070,22 +1091,69 @@ function syncExtraCredit(extra) {
     state.transactions.push(tx);
     applyTransactionToAsset(tx, 1);
     extra.creditTxId = tx.id;
-    return;
+    return true;
   }
   const tx = state.transactions.find(t => t.id === extra.creditTxId);
   if (!tx) {
     extra.creditTxId = "";
-    syncExtraCredit(extra);
-    return;
+    return syncExtraCredit(extra);
   }
+  let changed = false;
   if (num(tx.amount) !== amount || tx.assetId !== asset.id) {
     applyTransactionToAsset(tx, -1);
     tx.amount = amount;
     tx.assetId = asset.id;
     applyTransactionToAsset(tx, 1);
+    changed = true;
   }
   tx.desc = `Extra ${extra.desc}`;
   tx.categoryId = categoryId;
+  return changed;
+}
+
+function syncSalaryCredit() {
+  const currentMonth = monthKey();
+  const amount = num(state.income.salary);
+  const asset = state.assets.find(a => a.id === state.income.salaryAssetId) || null;
+  const tx = state.transactions.find(t => t.salaryCreditMonth === currentMonth);
+  if (!amount || !asset) {
+    if (tx) {
+      applyTransactionToAsset(tx, -1);
+      state.transactions = state.transactions.filter(t => t.id !== tx.id);
+      return true;
+    }
+    return false;
+  }
+  const categoryId = ensureSalaryIncomeCategory();
+  if (!tx) {
+    const salaryTx = {
+      id: uid(),
+      date: `${currentMonth}-01`,
+      desc: "Stipendio",
+      type: "income",
+      categoryId,
+      assetId: asset.id,
+      amount,
+      salaryCreditMonth: currentMonth
+    };
+    state.transactions.push(salaryTx);
+    applyTransactionToAsset(salaryTx, 1);
+    return true;
+  }
+  let changed = false;
+  if (num(tx.amount) !== amount || tx.assetId !== asset.id) {
+    applyTransactionToAsset(tx, -1);
+    tx.amount = amount;
+    tx.assetId = asset.id;
+    applyTransactionToAsset(tx, 1);
+    changed = true;
+  }
+  if (tx.categoryId !== categoryId || tx.desc !== "Stipendio") {
+    tx.categoryId = categoryId;
+    tx.desc = "Stipendio";
+    changed = true;
+  }
+  return changed;
 }
 
 function totals(){
@@ -1668,6 +1736,8 @@ function renderMoveSelect(){
   const previousAsset = $("moveAsset")?.value || "";
   const previousFrom = $("transferFrom")?.value || "";
   const previousTo = $("transferTo")?.value || "";
+  const previousSalaryAsset = state.income.salaryAssetId || "";
+  const previousExtraAsset = state.income.extraAssetId || "";
   const sel=$("moveCat"); sel.innerHTML="";
   const placeholder=document.createElement("option");
   placeholder.value="";
@@ -1701,6 +1771,28 @@ function renderMoveSelect(){
     });
     if (state.assets.some(a => a.id === previousFrom)) transferFrom.value = previousFrom;
     if (state.assets.some(a => a.id === previousTo)) transferTo.value = previousTo;
+  }
+  const salaryAssetSel = $("salaryAssetId");
+  if (salaryAssetSel) {
+    salaryAssetSel.innerHTML = `<option value="">Seleziona conto stipendio</option>`;
+    state.assets.forEach((a) => {
+      const option = document.createElement("option");
+      option.value = a.id;
+      option.textContent = a.name;
+      salaryAssetSel.appendChild(option);
+    });
+    if (state.assets.some(a => a.id === previousSalaryAsset)) salaryAssetSel.value = previousSalaryAsset;
+  }
+  const extraAssetSel = $("extraAssetId");
+  if (extraAssetSel) {
+    extraAssetSel.innerHTML = `<option value="">Seleziona conto extra</option>`;
+    state.assets.forEach((a) => {
+      const option = document.createElement("option");
+      option.value = a.id;
+      option.textContent = a.name;
+      extraAssetSel.appendChild(option);
+    });
+    if (state.assets.some(a => a.id === previousExtraAsset)) extraAssetSel.value = previousExtraAsset;
   }
 }
 
@@ -1751,6 +1843,11 @@ function renderCharts(t){
 function render(){
   ensureRecurringForCurrentMonth();
   ensureRecurringTransfers();
+  let autoChanged = syncSalaryCredit();
+  state.extras.forEach((extra) => {
+    autoChanged = syncExtraCredit(extra) || autoChanged;
+  });
+  if (autoChanged) saveDraft();
   const t=totals();
   updateProfileTheme();
   $("todayTracker").textContent = `Oggi ${new Date().toLocaleDateString("it-IT")}`;
@@ -1804,11 +1901,13 @@ function render(){
 }
 
 $("salary").oninput=e=>{state.income.salary=num(e.target.value);saveDraft();render();};
-$("salary").onchange=e=>{state.income.salary=num(e.target.value);save();render();};
+$("salary").onchange=e=>{state.income.salary=num(e.target.value);syncSalaryCredit();save();render();};
 $("investPct").oninput=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));saveDraft();render();};
 $("investPct").onchange=e=>{state.income.investPct=Math.max(0,Math.min(100,num(e.target.value)));save();render();};
 $("emergencyTarget").oninput=e=>{state.income.emergencyTarget=num(e.target.value);saveDraft();render();};
 $("emergencyTarget").onchange=e=>{state.income.emergencyTarget=num(e.target.value);save();render();};
+$("salaryAssetId").onchange=e=>{state.income.salaryAssetId=e.target.value;syncSalaryCredit();save();render();};
+$("extraAssetId").onchange=e=>{state.income.extraAssetId=e.target.value;state.extras.forEach(syncExtraCredit);save();render();};
 $("addExtra").onclick=async ()=>{const d=$("newExtraDesc").value.trim();const status=$("newExtraStatus").value;const platform=$("newExtraPlatform").value.trim();const paymentStatus=$("newExtraPayment").value;const deliveryStatus=$("newExtraDelivery").value;const buy=num($("newExtraBuy").value);const sell=num($("newExtraSell").value);const fees=num($("newExtraFees").value);const shipping=num($("newExtraShip").value);if(!d)return;const extra={id:uid(),desc:d,status,platform,paymentStatus,deliveryStatus,buy,sell,fees,shipping,archived:false,date:today(),creditTxId:""};state.extras.push(extra);syncExtraCredit(extra);logAction(`Aggiunta compravendita ${d}`);$("newExtraDesc").value="";$("newExtraPlatform").value="";$("newExtraPayment").value="none";$("newExtraDelivery").value="none";$("newExtraBuy").value="";$("newExtraSell").value="";$("newExtraFees").value="";$("newExtraShip").value="";render();await forceCloudSave();};
 $("moveDate").value=today();
 $("addMove").onclick=async ()=>{
