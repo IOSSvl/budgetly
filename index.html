@@ -511,6 +511,18 @@
         <p class="muted" id="sourceBreakdown">Stipendio â‚¬0 / Extra â‚¬0 / Uscite â‚¬0</p>
       </div>
     </div>
+    <p class="subtle-title">Pagamenti in arrivo</p>
+    <div class="card">
+      <p class="label">Totale atteso</p>
+      <p class="value blue" id="upcomingPaymentsTotal">&euro;0</p>
+      <div id="upcomingPaymentsList" class="list"></div>
+      <div class="row" style="grid-template-columns:minmax(0,1fr) 120px 120px auto">
+        <input id="newUpcomingDesc" type="text" placeholder="Pagamento atteso">
+        <input id="newUpcomingAmount" type="number" min="0" step="1" placeholder="Importo">
+        <input id="newUpcomingDays" type="number" min="0" step="1" placeholder="Tra giorni">
+        <button id="addUpcomingPayment" class="btn-primary btn-mini">+ Aggiungi</button>
+      </div>
+    </div>
     <div id="goalsList" class="list"></div>
     <div class="row goal-row">
       <input id="newGoalName" type="text" placeholder="Nuovo obiettivo risparmio">
@@ -647,6 +659,12 @@ function formatDateTime(value) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("it-IT");
 }
 
+function addDays(base, days) {
+  const date = new Date(base);
+  date.setDate(date.getDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
+}
+
 function openModal(id) {
   $(id)?.classList.remove("hidden");
 }
@@ -664,6 +682,7 @@ function createEmptyState() {
   return {
     income: { salary: 0, investPct: 0, emergencyTarget: 0 },
     extras: [],
+    upcomingPayments: [],
     categories: [
       { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }
     ],
@@ -731,6 +750,7 @@ function replaceState(nextState) {
 
 function normalizeState() {
   if (!Array.isArray(state.extras)) state.extras = [];
+  if (!Array.isArray(state.upcomingPayments)) state.upcomingPayments = [];
   if (!Array.isArray(state.transactions)) state.transactions = [];
   if (!Array.isArray(state.categories) || !state.categories.length) {
     state.categories = [{ id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }];
@@ -920,6 +940,10 @@ function totals(){
     .slice(0,3);
   const profitMonth = sum(soldExtras.filter(e => String(e.date || "").startsWith(currentMonth)), e => extraNet(e));
   const profitYear = sum(soldExtras.filter(e => String(e.date || "").startsWith(currentYear)), e => extraNet(e));
+  const upcomingPaymentsTotal = sum(
+    state.upcomingPayments.filter((p) => !p.received),
+    (p) => num(p.amount)
+  );
   const profitsByPlatform = {};
   soldExtras.forEach((e) => {
     const key = e.platform || "Altro";
@@ -943,6 +967,7 @@ function totals(){
     topCategories,
     profitMonth,
     profitYear,
+    upcomingPaymentsTotal,
     profitsByPlatform
   };
 }
@@ -1178,6 +1203,42 @@ function renderCategories(t){
     logAction(`Eliminata categoria ${removedCategory?.name || "categoria"}`);
     save();
     render();
+  });
+}
+
+function renderUpcomingPayments(t) {
+  const box = $("upcomingPaymentsList");
+  if (!box) return;
+  $("upcomingPaymentsTotal").textContent = EUR.format(t.upcomingPaymentsTotal);
+  box.innerHTML = "";
+  const items = [...state.upcomingPayments].sort((a, b) => String(a.expectedDate).localeCompare(String(b.expectedDate)));
+  if (!items.length) {
+    box.innerHTML = `<div class="row"><span class="muted">Nessun pagamento atteso registrato.</span></div>`;
+    return;
+  }
+  items.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    const remainingDays = Math.max(0, Math.ceil((new Date(item.expectedDate) - new Date(today())) / 86400000));
+    row.innerHTML = `<span><strong>${item.desc}</strong><br><span class="muted">Previsto il ${item.expectedDate} · tra ${remainingDays} giorni</span></span><span class="${item.received ? "green" : "blue"}">${EUR.format(item.amount)}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-mini" data-upcomingreceive="${item.id}">${item.received ? "Incassato" : "Segna incassato"}</button><button class="btn-mini icon-btn" data-upcomingdel="${item.id}" title="Elimina">&#128465;</button></span>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-upcomingreceive]").forEach((btn) => btn.onclick = async () => {
+    const item = state.upcomingPayments.find((p) => p.id === btn.dataset.upcomingreceive);
+    if (!item || item.received) return;
+    item.received = true;
+    logAction(`Incassato pagamento atteso ${item.desc}`);
+    render();
+    await forceCloudSave();
+  });
+  box.querySelectorAll("[data-upcomingdel]").forEach((btn) => btn.onclick = async () => {
+    const item = state.upcomingPayments.find((p) => p.id === btn.dataset.upcomingdel);
+    if (!item) return;
+    stashUndo({ type: "pagamento-atteso", payload: item });
+    state.upcomingPayments = state.upcomingPayments.filter((p) => p.id !== item.id);
+    logAction(`Eliminato pagamento atteso ${item.desc}`);
+    render();
+    await forceCloudSave();
   });
 }
 
@@ -1429,7 +1490,7 @@ function render(){
   $("userStatus").textContent = state.profile.displayName
     ? `Connesso come ${state.profile.displayName}`
     : $("userStatus").textContent;
-  renderExtras(); renderMoveSelect(); renderMoves(); renderRecurring(); renderCategories(t); renderTopCategories(t); renderWealth(t); renderCharts(t);
+  renderExtras(); renderUpcomingPayments(t); renderMoveSelect(); renderMoves(); renderRecurring(); renderCategories(t); renderTopCategories(t); renderWealth(t); renderCharts(t);
   const budgetTotalSalary = state.categories.reduce((acc,c)=>{
     const useSalary = !!c.useSalary;
     return acc + (useSalary ? (c.budget||0) : 0);
@@ -1468,6 +1529,7 @@ $("addMove").onclick=async ()=>{
 $("addCat").onclick=async ()=>{const name=$("newCatName").value.trim();const budget=num($("newCatBudget").value);const bucket=$("newCatBucket").value;if(!name)return;const n=name.toLowerCase();const purpose=n.includes("invest")?"invest":(n.includes("rispar")?"saving":"expense");state.categories.push({id:uid(),name,budget,bucket,purpose,useSalary:bucket!=="extra",useExtra:bucket!=="salary",cadence:"variable"});logAction(`Aggiunta categoria ${name}`);$("newCatName").value="";$("newCatBudget").value="";render();await forceCloudSave();};
 $("addAsset").onclick=async ()=>{const name=$("newAssetName").value.trim();const value=num($("newAssetValue").value);if(!name)return;state.assets.push({id:uid(),name,value});logAction(`Aggiunto conto ${name}`);$("newAssetName").value="";$("newAssetValue").value="";render();await forceCloudSave();};
 $("addGoal").onclick=async ()=>{const name=$("newGoalName").value.trim(); const target=num($("newGoalTarget").value); if(!name||!target)return; state.goals.push({id:uid(),name,target}); logAction(`Aggiunto obiettivo ${name}`); $("newGoalName").value=""; $("newGoalTarget").value=""; render(); await forceCloudSave();};
+$("addUpcomingPayment").onclick=async ()=>{const desc=$("newUpcomingDesc").value.trim();const amount=num($("newUpcomingAmount").value);const days=Math.max(0,Math.floor(num($("newUpcomingDays").value)));if(!desc||!amount)return;state.upcomingPayments.push({id:uid(),desc,amount,daysUntil:days,expectedDate:addDays(today(),days),received:false});logAction(`Aggiunto pagamento atteso ${desc}`);$("newUpcomingDesc").value="";$("newUpcomingAmount").value="";$("newUpcomingDays").value="";render();await forceCloudSave();};
 $("addRecurring").onclick=async ()=>{const desc=$("moveDesc").value.trim()||"Movimento ricorrente"; const type=$("moveType").value; const categoryId=$("moveCat").value; const assetId=$("moveAsset").value; const amount=num($("moveAmount").value); const day=Math.max(1,Math.min(31,num($("recurringDay").value)||new Date().getDate())); if(!categoryId||!amount)return; state.recurring.push({id:uid(),desc,type,categoryId,assetId,amount,day}); logAction(`Aggiunto ricorrente ${desc}`); $("recurringDay").value=""; render(); await forceCloudSave();};
 $("addTransfer").onclick=async ()=>{const fromId=$("transferFrom").value;const toId=$("transferTo").value;const amount=num($("transferAmount").value);if(!fromId||!toId||fromId===toId||!amount)return;const fromAsset=state.assets.find(a=>a.id===fromId);const toAsset=state.assets.find(a=>a.id===toId);if(!fromAsset||!toAsset)return;fromAsset.value=num(fromAsset.value)-amount;toAsset.value=num(toAsset.value)+amount;state.transfers.push({id:uid(),date:today(),fromId,toId,amount});logAction(`Trasferiti ${EUR.format(amount)} da ${fromAsset.name} a ${toAsset.name}`);$("transferAmount").value="";render();await forceCloudSave();};
 $("moveSearch").oninput=()=>render();
@@ -1623,6 +1685,7 @@ $("undoDeleteBtn").onclick = async () => {
   if (type === 'ricorrente') state.recurring.push(payload);
   if (type === 'conto') state.assets.push(payload);
   if (type === 'categoria') state.categories.push(payload);
+  if (type === 'pagamento-atteso') state.upcomingPayments.push(payload);
   if (type === 'trasferimento') {
     const fromAsset = state.assets.find(a => a.id === payload.fromId);
     const toAsset = state.assets.find(a => a.id === payload.toId);

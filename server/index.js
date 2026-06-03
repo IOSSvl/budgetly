@@ -15,6 +15,7 @@ function emptyPayload() {
   return {
     income: { salary: 0, investPct: 0, emergencyTarget: 0 },
     extras: [],
+    upcomingPayments: [],
     categories: [
       { id: "categoria-base", name: "Categoria base", budget: 0, bucket: "salary", purpose: "expense", useSalary: true, useExtra: false, cadence: "variable" }
     ],
