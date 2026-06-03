@@ -451,9 +451,9 @@
   <section class="income card">
     <div class="help-inline"><h2>Entrate</h2><button class="help-btn" data-help="entrate">?</button></div>
     <div class="list">
-      <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="number" min="0" step="10"></div>
+      <div class="row"><span class="label">Stipendio netto</span><input id="salary" type="text" inputmode="decimal" placeholder="0,00"></div>
       <div class="row"><span class="label">Quota investimenti su residuo non vitale (%)</span><input id="investPct" type="number" min="0" max="100" step="1"></div>
-      <div class="row"><span class="label">Target fondo emergenza</span><input id="emergencyTarget" type="number" min="0" step="10"></div>
+      <div class="row"><span class="label">Target fondo emergenza</span><input id="emergencyTarget" type="text" inputmode="decimal" placeholder="0,00"></div>
     </div>
     <p class="muted" style="margin-top:8px">La quota investimenti viene presa dopo le spese essenziali e prima di svago e risparmio finale.</p>
     <p class="label" style="margin-top:10px">Guadagni extra mese (totale)</p>
@@ -467,10 +467,10 @@
         <input id="newExtraPlatform" type="text" placeholder="Piattaforma">
         <select id="newExtraPayment"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select>
         <select id="newExtraDelivery"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select>
-        <input id="newExtraBuy" type="number" min="0" step="10" placeholder="Comprato">
-        <input id="newExtraSell" type="number" min="0" step="10" placeholder="Venduto">
-        <input id="newExtraFees" type="number" min="0" step="1" placeholder="Comm.">
-        <input id="newExtraShip" type="number" min="0" step="1" placeholder="Sped.">
+        <input id="newExtraBuy" type="text" inputmode="decimal" placeholder="Comprato">
+        <input id="newExtraSell" type="text" inputmode="decimal" placeholder="Venduto">
+        <input id="newExtraFees" type="text" inputmode="decimal" placeholder="Comm.">
+        <input id="newExtraShip" type="text" inputmode="decimal" placeholder="Sped.">
         <button id="addExtra" class="btn-primary btn-mini">+ Extra</button>
       </div>
       <div id="platformProfitBreakdown" class="notice" style="margin-top:8px">Profitto per piattaforma in arrivo.</div>
@@ -495,7 +495,7 @@
       <div class="card"><p class="label">Profitto extra anno</p><p class="value green" id="profitYear">&euro;0</p></div>
     </div>
     <div class="forecast-grid">
-      <div class="card"><p class="label">Simulatore spesa</p><input id="whatIfAmount" type="number" min="0" step="1" placeholder="Importo ipotetico"><p class="muted" id="whatIfResult" style="margin-top:8px">Inserisci un importo per vedere l'impatto.</p></div>
+      <div class="card"><p class="label">Simulatore spesa</p><input id="whatIfAmount" type="text" inputmode="decimal" placeholder="Importo ipotetico"><p class="muted" id="whatIfResult" style="margin-top:8px">Inserisci un importo per vedere l'impatto.</p></div>
       <div class="card"><p class="label">Alert budget</p><p class="value" id="budgetAlertDays">--</p><p class="muted" id="budgetAlertText">In attesa di dati.</p></div>
       <div class="card"><p class="label">Come si calcola</p><p class="muted" id="forecastExplain">Spiegazione calcoli in arrivo.</p></div>
     </div>
@@ -518,7 +518,7 @@
       <div id="upcomingPaymentsList" class="list"></div>
       <div class="row" style="grid-template-columns:minmax(0,1fr) 120px 120px auto">
         <input id="newUpcomingDesc" type="text" placeholder="Pagamento atteso">
-        <input id="newUpcomingAmount" type="number" min="0" step="1" placeholder="Importo">
+        <input id="newUpcomingAmount" type="text" inputmode="decimal" placeholder="Importo">
         <input id="newUpcomingDays" type="number" min="0" step="1" placeholder="Tra giorni">
         <button id="addUpcomingPayment" class="btn-primary btn-mini">+ Aggiungi</button>
       </div>
@@ -526,7 +526,7 @@
     <div id="goalsList" class="list"></div>
     <div class="row goal-row">
       <input id="newGoalName" type="text" placeholder="Nuovo obiettivo risparmio">
-      <input id="newGoalTarget" type="number" min="0" step="10" placeholder="Target">
+      <input id="newGoalTarget" type="text" inputmode="decimal" placeholder="Target">
       <button id="addGoal" class="btn-primary btn-mini">+ Obiettivo</button>
     </div>
   </section>
@@ -534,7 +534,7 @@
   <section class="moves card" id="movimenti">
     <div class="help-inline"><h2>Movimenti</h2><button class="help-btn" data-help="movimenti">?</button></div>
     <div class="row move-entry">
-      <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="number" min="0" step="1" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
+      <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="text" inputmode="decimal" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
     </div>
     <div class="row" style="grid-template-columns:1fr 140px 140px">
       <input id="moveSearch" type="text" placeholder="Cerca nei movimenti">
@@ -548,7 +548,7 @@
     <div class="row" style="grid-template-columns:1fr 1fr 120px auto">
       <select id="transferFrom"></select>
       <select id="transferTo"></select>
-      <input id="transferAmount" type="number" min="0" step="1" placeholder="Importo">
+      <input id="transferAmount" type="text" inputmode="decimal" placeholder="Importo">
       <button id="addTransfer" class="btn-mini">Trasferisci</button>
     </div>
     <div class="row recurring-row" style="margin-top:8px">
@@ -569,7 +569,7 @@
     <div id="catsList" class="list"></div>
     <div class="row cat-create">
       <input id="newCatName" type="text" placeholder="Nuova categoria">
-      <input id="newCatBudget" type="number" min="0" step="10" placeholder="Budget">
+      <input id="newCatBudget" type="text" inputmode="decimal" placeholder="Budget">
       <select id="newCatBucket"><option value="salary">Stipendio</option><option value="extra">Extra</option><option value="mixed">Misto</option></select>
       <button id="addCat" class="btn-primary btn-mini">+ Categoria</button>
     </div>
@@ -581,7 +581,7 @@
   <section class="wealth card" id="patrimonio">
     <div class="help-inline"><h2>Patrimonio</h2><button class="help-btn" data-help="patrimonio">?</button></div>
     <div id="wealthList" class="list"></div>
-    <div class="row asset-create"><input id="newAssetName" type="text" placeholder="Nuovo conto / asset"><input id="newAssetValue" type="number" min="0" step="10" placeholder="Valore"><button id="addAsset" class="btn-primary btn-mini">+ Aggiungi</button></div>
+    <div class="row asset-create"><input id="newAssetName" type="text" placeholder="Nuovo conto / asset"><input id="newAssetValue" type="text" inputmode="decimal" placeholder="Valore"><button id="addAsset" class="btn-primary btn-mini">+ Aggiungi</button></div>
     <div class="kpi">
       <div class="card"><p class="label">Patrimonio totale</p><p class="value green" id="netWorth">â‚¬0</p></div>
       <div class="card"><p class="label">Risparmio totale</p><p class="value blue" id="savedTotal">â‚¬0</p></div>
@@ -595,7 +595,7 @@
 <script>
 const STORAGE_KEY="budgetly_v3";
 const TOKEN_KEY="budgetly_token";
-const EUR=new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const EUR=new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
 const today=()=>new Date().toISOString().slice(0,10);
 const uid=()=>crypto.randomUUID();
 const $=(id)=>document.getElementById(id);
@@ -613,7 +613,14 @@ const recurringDate=(baseDate, day)=>{
 };
 const num=(v)=>{
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  const s = String(v ?? "").trim().replace(",", ".");
+  let s = String(v ?? "").trim();
+  if (!s) return 0;
+  s = s.replace(/[€\s]/g, "");
+  if (s.includes(",") && s.includes(".")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.includes(",")) {
+    s = s.replace(",", ".");
+  }
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 };
@@ -1085,7 +1092,7 @@ function renderExtras(){
   state.extras.filter(e => !e.archived && matchesSearch(e.desc, e.platform, e.status, e.paymentStatus, e.deliveryStatus)).forEach(e=>{
     const profit=extraNet(e);
     const row=document.createElement("div"); row.className="row extra-row";
-    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="text" value="${e.platform||''}" data-explatform="${e.id}" placeholder="Piattaforma"><select data-expay="${e.id}"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select><select data-exdelivery="${e.id}"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select><input type="number" min="0" step="10" value="${e.buy||0}" data-exbuy="${e.id}"><input type="number" min="0" step="10" value="${e.sell||0}" data-exsell="${e.id}"><input type="number" min="0" step="1" value="${e.fees||0}" data-exfees="${e.id}"><input type="number" min="0" step="1" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini icon-btn" data-exarchive="${e.id}" title="Archivia">âœ“</button><button class="btn-mini icon-btn" data-exdel="${e.id}" title="Elimina">&#128465;</button>`;
+    row.innerHTML=`<input type="text" value="${e.desc}" data-exdesc="${e.id}"><select data-exstatus="${e.id}"><option value="bought">Comprato</option><option value="listed">In vendita</option><option value="sold">Venduto</option></select><input type="text" value="${e.platform||''}" data-explatform="${e.id}" placeholder="Piattaforma"><select data-expay="${e.id}"><option value="none">Pagamento</option><option value="pending">In attesa</option><option value="paid">Pagato</option></select><select data-exdelivery="${e.id}"><option value="none">Spedizione</option><option value="sent">Spedito</option><option value="delivered">Consegnato</option></select><input type="text" inputmode="decimal" value="${e.buy||0}" data-exbuy="${e.id}"><input type="text" inputmode="decimal" value="${e.sell||0}" data-exsell="${e.id}"><input type="text" inputmode="decimal" value="${e.fees||0}" data-exfees="${e.id}"><input type="text" inputmode="decimal" value="${e.shipping||0}" data-exship="${e.id}"><span class="green">${EUR.format(profit)}</span><button class="btn-mini icon-btn" data-exarchive="${e.id}" title="Archivia">âœ“</button><button class="btn-mini icon-btn" data-exdel="${e.id}" title="Elimina">&#128465;</button>`;
     box.appendChild(row);
     row.querySelector(`[data-exstatus="${e.id}"]`).value = e.status || "sold";
     row.querySelector(`[data-expay="${e.id}"]`).value = e.paymentStatus || "none";
@@ -1171,7 +1178,7 @@ function renderCategories(t){
   state.categories.filter(c => matchesSearch(c.name, c.purpose, c.cadence)).forEach(c=>{
     const spent=t.byCat[c.id]||0; const left=(c.budget||0)-spent; const ratio = num(c.budget) > 0 ? spent / num(c.budget) : 0;
     const row=document.createElement("div"); row.className="row cat-row";
-    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="number" min="0" step="10" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status"></span><button class="btn-mini icon-btn" data-catdel="${c.id}" title="Elimina categoria">&#128465;</button>`;
+    row.innerHTML=`<input type="text" value="${c.name}" data-catname="${c.id}"><label class="muted cat-toggle"><input type="checkbox" data-catsal="${c.id}" ${c.useSalary?"checked":""}><span>Stip.</span></label><label class="muted cat-toggle"><input type="checkbox" data-catext="${c.id}" ${c.useExtra?"checked":""}><span>Extra</span></label><select data-catpurpose="${c.id}"><option value="expense">Spesa</option><option value="saving">Risparmio</option><option value="invest">Investimento</option></select><input type="text" inputmode="decimal" value="${c.budget}" data-catbudget="${c.id}"><span class="cat-status"></span><button class="btn-mini icon-btn" data-catdel="${c.id}" title="Elimina categoria">&#128465;</button>`;
     box.appendChild(row);
     row.querySelector(`[data-catpurpose="${c.id}"]`).value = c.purpose || "expense";
     const status = row.querySelector('.cat-status');
@@ -1324,7 +1331,7 @@ function renderWealth(t){
   const box=$("wealthList"); box.innerHTML="";
   state.assets.filter(a => matchesSearch(a.name)).forEach(a=>{
     const row=document.createElement("div"); row.className="row wealth-row";
-    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="number" min="0" step="10" value="${a.value}" data-aval="${a.id}"><button class="btn-mini icon-btn" data-adel="${a.id}" title="Elimina">&#128465;</button>`;
+    row.innerHTML=`<input type="text" value="${a.name}" data-aname="${a.id}"><input type="text" inputmode="decimal" value="${a.value}" data-aval="${a.id}"><button class="btn-mini icon-btn" data-adel="${a.id}" title="Elimina">&#128465;</button>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-aname]").forEach(i=>{
