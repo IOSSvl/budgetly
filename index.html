@@ -120,6 +120,7 @@
     .move-flags{grid-template-columns:220px minmax(0,1fr);align-items:start}
     .move-flags .flag-copy{display:grid;gap:4px}
     .move-flags .flag-title{font:700 13px/1 "Syne",sans-serif;color:var(--accent-strong)}
+    .move-cadence-inline{grid-template-columns:220px minmax(0,1fr);align-items:center;margin-top:8px}
     .section-stack{display:grid;gap:16px;margin-top:14px}
     .moves-stack{display:grid;gap:14px;margin-top:14px}
     .subsection{display:grid;gap:8px}
@@ -245,6 +246,7 @@
       .forecast-grid,.legend-grid,.profile-grid,.section-grid{grid-template-columns:1fr}
       .pie-wrap{grid-template-columns:1fr}
       .move-flags{grid-template-columns:1fr}
+      .move-cadence-inline{grid-template-columns:1fr}
     }
     @media (max-width:720px){
       .app{padding:12px;gap:12px}
@@ -609,6 +611,17 @@
         <div class="row move-entry">
           <input id="moveDate" type="date"><input id="moveDesc" type="text" placeholder="Descrizione"><select id="moveType"><option value="expense">Spesa</option><option value="income">Entrata</option></select><select id="moveCat"></select><select id="moveAsset"></select><input id="moveAmount" type="text" inputmode="decimal" placeholder="Importo"><button id="addMove" class="btn-primary btn-mini">Salva</button>
         </div>
+        <div class="row move-cadence-inline">
+          <select id="moveFixedCadence">
+            <option value="none">Transazione singola</option>
+            <option value="monthly">Transazione mensile</option>
+            <option value="weekly">Transazione settimanale</option>
+          </select>
+          <div class="flag-copy">
+            <span class="flag-title">Periodicita transazione</span>
+            <span class="muted">Scegli singola, mensile o settimanale direttamente mentre registri il movimento.</span>
+          </div>
+        </div>
       </div>
       <div class="subsection">
         <div class="subsection-label">Filtri elenco</div>
@@ -619,25 +632,6 @@
               <input id="moveSearch" type="text" placeholder="Cerca nei movimenti">
               <select id="movePeriod"><option value="month">Mese corrente</option><option value="week">Ultimi 7 giorni</option><option value="all">Tutto</option></select>
               <input id="moveMonthFilter" type="month">
-            </div>
-          </div>
-        </details>
-      </div>
-      <div class="subsection">
-        <div class="subsection-label">Periodicita transazione</div>
-        <details class="menu-panel">
-          <summary>Apri periodicita transazione</summary>
-          <div class="menu-content">
-            <div class="row move-flags">
-              <select id="moveFixedCadence">
-                <option value="none">Transazione singola</option>
-                <option value="monthly">Transazione mensile</option>
-                <option value="weekly">Transazione settimanale</option>
-              </select>
-              <div class="flag-copy">
-                <span class="flag-title">Come viene trattata</span>
-                <span class="muted">Scegli "singola" per una spesa una tantum, "mensile" per affitto o bollette e "settimanale" per spese che si ripetono ogni settimana.</span>
-              </div>
             </div>
           </div>
         </details>
